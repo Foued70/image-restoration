@@ -43,12 +43,13 @@ class FlowNetwork(object):
     
         return parent, 0
 
-    def max_cut(self, source, sink):
+    def min_cut(self, source, sink):
         nodes = len(self.neighbour)
     
         while True:
     
             path, aug_flow = self.bfs(source, sink)
+            print 0,
     
             if aug_flow == 0:
                 break
@@ -62,11 +63,13 @@ class FlowNetwork(object):
     
                 v = u
     
+        print "Minimal cut found!"
+    
         path, aug_flow = self.bfs(source, sink)
     
         A = set([i for i, v in enumerate(path) if v >= 0])
         A.add(source)
-    
+
         return A, set(xrange(nodes)).difference(A)
 
 
@@ -91,7 +94,7 @@ def simple_test():
             if arr[i][j] != 0:
                 network.add_edge(i, j, arr[i][j])
 
-    A, B = network.max_cut(source, sink)
+    A, B = network.min_cut(source, sink)
 
     print A, B
 
@@ -108,11 +111,14 @@ def Eij(up, uq):
 def lena_test():
 
     img = mh.imread('img/lena512.bmp')
+    img = mh.imread('../img/lena512.bmp')
+    print "Loaded Lena"
 
     #pylab.imshow(img, cmap=pylab.gray())
     #pylab.show()
 
     network = FlowNetwork()
+    print "Empty network created"
 
     w = len(img[0]) # x dimension
     h = len(img)    # y dimension
@@ -157,7 +163,9 @@ def lena_test():
 
                 network.add_edge((x, y), (x, y+1), B + C - A - D)
 
-    A, B = network.max_cut('s', 't')
+    print "Network filled with edges, starting min-cut algorithm"
+
+    A, B = network.min_cut('s', 't')
 
     print A, B
 
