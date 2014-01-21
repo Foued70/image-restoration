@@ -107,7 +107,7 @@ def Eij(up, uq):
 
 def lena_test():
 
-    img = mh.imread('../img/lena512.bmp')
+    img = mh.imread('img/lena512.bmp')
 
     #pylab.imshow(img, cmap=pylab.gray())
     #pylab.show()
