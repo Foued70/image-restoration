@@ -10,14 +10,29 @@ import pylab
 
 class FlowNetwork(object):
     def __init__(self):
-        self.neighbour = defaultdict(lambda: [])
-        self.cap       = defaultdict(lambda: 0)
-        self.flow      = defaultdict(lambda: 0)
+        self.neighbour = {}
+        self.cap       = {}
+        self.flow      = {}
 
     def add_edge(self, u, v, c):
-        self.neighbour[u].append(v)
-        self.neighbour[v].append(u)
-        self.cap[(u,v)] = c
+        if u not in self.neighbour:
+            self.neighbour[u] = []
+        if v not in self.neighbour:
+            self.neighbour[v] = []
+        if v not in self.neighbour[u]:
+            self.neighbour[u].append(v)
+        if u not in self.neighbour[v]:
+            self.neighbour[v].append(u)
+
+        if (u,v) not in self.cap:
+            self.cap[(u,v)] = 0
+        self.cap[(u,v)] += c
+
+        if (v,u) not in self.cap:
+            self.cap[(v,u)] = 0
+
+        self.flow[(u,v)] = 0
+        self.flow[(v,u)] = 0
 
     def bfs(self, source, sink):
         nodes = len(self.neighbour)
@@ -32,6 +47,8 @@ class FlowNetwork(object):
         q.put(source)
         while not q.empty():
             u = q.get()
+            #print "%r has %d neighbours" % (u, len(self.neighbour[u]))
+            #print self.neighbour[u]
             for v in self.neighbour[u]:
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0 and parent[v] == -1:
                     parent[v] = u
@@ -49,7 +66,7 @@ class FlowNetwork(object):
         while True:
     
             path, aug_flow = self.bfs(source, sink)
-            print 0,
+            print sum(self.flow[(source,v)] for v in self.neighbour[source])
     
             if aug_flow == 0:
                 break
@@ -67,10 +84,10 @@ class FlowNetwork(object):
     
         path, aug_flow = self.bfs(source, sink)
     
-        A = set([i for i, v in enumerate(path) if v >= 0])
+        A = set([v for v in path if v != -1 and v != -2])
         A.add(source)
 
-        return A, set(xrange(nodes)).difference(A)
+        return A, set(self.neighbour.keys()).difference(A)
 
 
 def simple_test():
@@ -102,15 +119,15 @@ def f(u, v):
     return abs(u - v)**2
 
 def Ei(img, p, u):
-    return (f(101, img[p[0]][p[1]])
-            - f(100, img[p[0]][p[1]])) * (1 - u)
+    return (f(131, img[p[0]][p[1]])
+            - f(130, img[p[0]][p[1]])) * (1 - u)
 
 def Eij(up, uq):
     return 1 * ((1 - 2 * uq) * up + uq)
 
 def lena_test():
 
-    img = mh.imread('img/lena512.bmp')
+    img = mh.imread('img/lenaeye.bmp')
     print "Loaded Lena"
 
     #pylab.imshow(img, cmap=pylab.gray())
@@ -166,7 +183,18 @@ def lena_test():
 
     A, B = network.min_cut('s', 't')
 
+    A.remove('s')
     print A, B
+    for x, y in A:
+        img[w-1-x][y] = 100
+
+    B.remove('t')
+    for x, y in B:
+        img[w-1-x][y] = 0
+
+    pylab.imshow(img, cmap=pylab.gray())
+    pylab.show()
+
 
 lena_test()
 
