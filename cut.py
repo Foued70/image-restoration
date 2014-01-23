@@ -73,6 +73,31 @@ class FlowNetwork(object):
         return A, set(xrange(nodes)).difference(A)
 
 
+    def min_cut_dinic(self, source, sink):
+        while True:
+            label = defaultdict(lambda: -1)
+            label[source] = 0
+
+            nodes = len(self.neighbour)
+
+            q = Queue()
+    
+            q.put(source)
+            while not q.empty():
+                u = q.get()
+                for v in self.neighbour[u]:
+                    if self.cap[(u,v)] - self.flow[(u,v)] > 0 and label[v] == -1:
+                        label[v] = label[u] + 1
+                        if v != sink:
+                            q.put(v)
+
+                if level[sink] == -1:
+                    return
+
+            self.blocking_flow(label, source, sink)
+    
+        return parent, 0
+
 def simple_test():
 
     arr = np.array([
