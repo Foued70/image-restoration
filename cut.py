@@ -19,6 +19,8 @@ class FlowNetwork(object):
             self.neighbour[u] = []
         if v not in self.neighbour:
             self.neighbour[v] = []
+
+        # FIXME: This is a linear lookup :-(
         if v not in self.neighbour[u]:
             self.neighbour[u].append(v)
         if u not in self.neighbour[v]:
@@ -89,11 +91,34 @@ class FlowNetwork(object):
 
         return A, set(self.neighbour.keys()).difference(A)
 
+    def blocking_flow(level, u, source, sink, limit):
+        if limit <= 0:
+            return 0
+
+        if node == sink:
+            return limit
+
+        throughput = 0
+        for v in self.neighbour[u]:
+            residual = self.cap[(u,v)] - self.flow[(u,v)]
+            if level[v] == level[u] + 1 and residual > 0:
+                aug = blocking_flow(level, v, source, sink,
+                        min(limit - throughput, residual)
+                        )
+
+                throughput += aug
+                flow[(u,v)] += aug
+                flow[(v,u)] -= aug
+
+        if throughput == 0:
+            level[u] = -1
+
+        return throughput
 
     def min_cut_dinic(self, source, sink):
         while True:
-            label = defaultdict(lambda: -1)
-            label[source] = 0
+            level = defaultdict(lambda: -1)
+            level[source] = 0
 
             nodes = len(self.neighbour)
 
@@ -103,17 +128,22 @@ class FlowNetwork(object):
             while not q.empty():
                 u = q.get()
                 for v in self.neighbour[u]:
-                    if self.cap[(u,v)] - self.flow[(u,v)] > 0 and label[v] == -1:
-                        label[v] = label[u] + 1
+                    if self.cap[(u,v)] - self.flow[(u,v)] > 0 and level[v] == -1:
+                        level[v] = level[u] + 1
                         if v != sink:
                             q.put(v)
 
                 if level[sink] == -1:
-                    return
+                    break
 
-            self.blocking_flow(label, source, sink)
+            self.blocking_flow(level, source, sink)
     
-        return parent, 0
+        path, aug_flow = self.bfs(source, sink)
+    
+        A = set([v for v in path if v != -1 and v != -2])
+        A.add(source)
+
+        return A, set(self.neighbour.keys()).difference(A)
 
 def simple_test():
 
@@ -136,7 +166,7 @@ def simple_test():
             if arr[i][j] != 0:
                 network.add_edge(i, j, arr[i][j])
 
-    A, B = network.min_cut(source, sink)
+    A, B = network.min_cut_dinic(source, sink)
 
     print A, B
 
@@ -220,6 +250,6 @@ def lena_test():
     pylab.imshow(img, cmap=pylab.gray())
     pylab.show()
 
-
-lena_test()
+simple_test()
+#lena_test()
 
