@@ -49,8 +49,6 @@ class FlowNetwork(object):
         q.put(source)
         while not q.empty():
             u = q.get()
-            #print "%r has %d neighbours" % (u, len(self.neighbour[u]))
-            #print self.neighbour[u]
             for v in self.neighbour[u]:
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0 and parent[v] == -1:
                     parent[v] = u
@@ -62,7 +60,7 @@ class FlowNetwork(object):
     
         return parent, 0
 
-    def min_cut(self, source, sink):
+    def min_cut_edmonds_karp(self, source, sink):
         nodes = len(self.neighbour)
     
         while True:
@@ -82,8 +80,6 @@ class FlowNetwork(object):
     
                 v = u
     
-        print "Minimal cut found!"
-    
         path, aug_flow = self.bfs(source, sink)
     
         A = set([v for v in path if v != -1 and v != -2])
@@ -91,24 +87,24 @@ class FlowNetwork(object):
 
         return A, set(self.neighbour.keys()).difference(A)
 
-    def blocking_flow(level, u, source, sink, limit):
+    def blocking_flow(self, level, u, source, sink, limit):
         if limit <= 0:
             return 0
 
-        if node == sink:
+        if u == sink:
             return limit
 
         throughput = 0
         for v in self.neighbour[u]:
             residual = self.cap[(u,v)] - self.flow[(u,v)]
             if level[v] == level[u] + 1 and residual > 0:
-                aug = blocking_flow(level, v, source, sink,
+                aug = self.blocking_flow(level, v, source, sink,
                         min(limit - throughput, residual)
                         )
 
                 throughput += aug
-                flow[(u,v)] += aug
-                flow[(v,u)] -= aug
+                self.flow[(u,v)] += aug
+                self.flow[(v,u)] -= aug
 
         if throughput == 0:
             level[u] = -1
@@ -133,10 +129,10 @@ class FlowNetwork(object):
                         if v != sink:
                             q.put(v)
 
-                if level[sink] == -1:
-                    break
+            if level[sink] == -1:
+                break
 
-            self.blocking_flow(level, source, sink)
+            self.blocking_flow(level, source, source, sink, 1000000000)
     
         path, aug_flow = self.bfs(source, sink)
     
@@ -182,7 +178,7 @@ def Eij(up, uq):
 
 def lena_test():
 
-    img = mh.imread('img/lenaeye.bmp')
+    img = mh.imread('img/lenaface.bmp')
     print "Loaded Lena"
 
     #pylab.imshow(img, cmap=pylab.gray())
@@ -236,10 +232,9 @@ def lena_test():
 
     print "Network filled with edges, starting min-cut algorithm"
 
-    A, B = network.min_cut('s', 't')
+    A, B = network.min_cut_dinic('s', 't')
 
     A.remove('s')
-    print A, B
     for x, y in A:
         img[w-1-x][y] = 100
 
@@ -250,6 +245,6 @@ def lena_test():
     pylab.imshow(img, cmap=pylab.gray())
     pylab.show()
 
-simple_test()
-#lena_test()
+#simple_test()
+lena_test()
 
