@@ -6,7 +6,7 @@ from Queue import Queue
 
 import numpy as np
 import mahotas as mh
-import pylab
+import matplotlib.pyplot as plt
 
 class FlowNetwork(object):
     def __init__(self):
@@ -242,8 +242,10 @@ def lena_test():
     for x, y in B:
         img[w-1-x][y] = 0
 
-    pylab.imshow(img, cmap=pylab.gray())
-    pylab.show()
+    #pylab.imshow(img, cmap=pylab.gray())
+    #pylab.show()
+
+    mh.imsave('img/lenaface_segment.bmp', img)
 
 #simple_test()
 lena_test()
