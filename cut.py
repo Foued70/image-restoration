@@ -7,6 +7,7 @@ from Queue import Queue
 import numpy as np
 import mahotas as mh
 import matplotlib.pyplot as plt
+import argparse
 
 class FlowNetwork(object):
     def __init__(self):
@@ -176,9 +177,9 @@ def Ei(img, p, u):
 def Eij(up, uq):
     return 1 * ((1 - 2 * uq) * up + uq)
 
-def lena_test():
+def segment(ifile, ofile):
 
-    img = mh.imread('img/lenaface.bmp')
+    img = mh.imread(ifile)
     print "Loaded Lena"
 
     #pylab.imshow(img, cmap=pylab.gray())
@@ -234,19 +235,30 @@ def lena_test():
 
     A, B = network.min_cut_dinic('s', 't')
 
+    print "Minimal cut found"
+
     A.remove('s')
     for x, y in A:
-        img[w-1-x][y] = 100
+        img[x][y] = 100
 
     B.remove('t')
     for x, y in B:
-        img[w-1-x][y] = 0
+        img[x][y] = 0
 
     #pylab.imshow(img, cmap=pylab.gray())
     #pylab.show()
 
-    mh.imsave('img/lenaface_segment.bmp', img)
+    mh.imsave(ofile, img)
 
 #simple_test()
-lena_test()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("ifile", help="path of input file")
+    parser.add_argument("ofile", help="path of output file")
+    args = parser.parse_args()
+
+    segment(args.ifile, args.ofile)
+
+main()
 
