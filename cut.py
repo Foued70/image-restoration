@@ -9,6 +9,12 @@ import mahotas as mh
 import matplotlib.pyplot as plt
 import argparse
 
+def minimum(iterable, default=0):
+    try:
+        return min(iterable)
+    except ValueError:
+        return default
+
 class FlowNetwork(object):
     def __init__(self):
         self.neighbour = {}
@@ -112,6 +118,22 @@ class FlowNetwork(object):
 
         return throughput
 
+    def blocking_flow_nonrecursive(self, level, source, sink, limit):
+        q = []
+        q.append(source)
+
+        visited = set()
+        throughput = defaultset(lambda: 0)
+        while len(q) > 0:
+            u = q.pop()
+            if u not in visited:
+                visited.add(u)
+                q.append(u)
+                q.extend(self.neighbour[u])
+            else:
+                pass
+                #postprocess(u)
+
     def min_cut_dinic(self, source, sink):
         while True:
             level = defaultdict(lambda: -1)
@@ -142,6 +164,76 @@ class FlowNetwork(object):
 
         return A, set(self.neighbour.keys()).difference(A)
 
+    def push(self, excess, u, v):
+        f = min(excess[u], self.cap[(u,v)] - self.flow[(u,v)])
+        print "Pushing %r from %r to %r" % (f, u, v)
+        excess[u] -= f
+        excess[v] += f
+        self.flow[(u,v)] += f
+        self.flow[(v,u)] -= f
+        return f != 0
+
+    def relabel(self, height, u):
+        old = height[u]
+        print "Relabel %r, height = %r, neighbour = %r" % (u, height[u],
+                self.neighbour[u])
+        print [height[v] for v in self.neighbour[u] \
+                if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
+                ]
+        height[u] = minimum((height[v] for v in self.neighbour[u] \
+                if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
+                ), 0) + 1
+        print "%r == %r" % (height[u], old)
+        return height[u] != old
+
+    def min_cut_push_relabel(self, source, sink):
+        excess = defaultdict(lambda: 0)
+        height = defaultdict(lambda: 0)
+        excess[source] = 1000000 # FIXME: Infinity
+
+        old = True
+        while old:
+            old = False
+            for u,v in self.cap.keys():
+                if not excess[u] > 0:
+                    continue
+                if height[u] != height[v] + 1:
+                    continue
+                new = self.push(excess, u, v)
+                old = old or new
+
+            for u in self.neighbour.keys():
+                cont = False
+                if u == sink:
+                    continue
+                if not excess[u] > 0:
+                    continue
+                for v in self.neighbour[u]:
+                    if self.cap[(u,v)] - self.flow[(u,v)] > 0:
+                        if height[u] > height[v]:
+                            print "cont = True"
+                            cont = True
+                            break
+                if cont:
+                    continue
+                new = self.relabel(height, u)
+                old = old or new
+            print "Flow:", self.flow
+            print "Excess:", excess
+            print "Height:", height
+            stdin.readline()
+
+        path, aug_flow = self.bfs(source, sink)
+    
+        A = set([v for v in path if v != -1 and v != -2])
+        A.add(source)
+
+        print self.cap
+        print self.flow
+        print excess
+        print height
+        return A, set(self.neighbour.keys()).difference(A)
+
 def simple_test():
 
     arr = np.array([
@@ -163,7 +255,8 @@ def simple_test():
             if arr[i][j] != 0:
                 network.add_edge(i, j, arr[i][j])
 
-    A, B = network.min_cut_dinic(source, sink)
+    #A, B = network.min_cut_dinic(source, sink)
+    A, B = network.min_cut_push_relabel(source, sink)
 
     print A, B
 
@@ -175,7 +268,7 @@ def Ei(img, p, u):
             - f(130, img[p[0]][p[1]])) * (1 - u)
 
 def Eij(up, uq):
-    return 1 * ((1 - 2 * uq) * up + uq)
+    return 10 * ((1 - 2 * uq) * up + uq)
 
 def segment(ifile, ofile):
 
@@ -250,7 +343,7 @@ def segment(ifile, ofile):
 
     mh.imsave(ofile, img)
 
-#simple_test()
+simple_test()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -260,5 +353,5 @@ def main():
 
     segment(args.ifile, args.ofile)
 
-main()
+#main()
 
