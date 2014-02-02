@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from sys import stdin
-from collections import defaultdict
+from collections import defaultdict, deque
 from Queue import Queue
 
 import numpy as np
@@ -23,15 +23,12 @@ class FlowNetwork(object):
 
     def add_edge(self, u, v, c):
         if u not in self.neighbour:
-            self.neighbour[u] = []
+            self.neighbour[u] = set()
         if v not in self.neighbour:
-            self.neighbour[v] = []
+            self.neighbour[v] = set()
 
-        # FIXME: This is a linear lookup :-(
-        if v not in self.neighbour[u]:
-            self.neighbour[u].append(v)
-        if u not in self.neighbour[v]:
-            self.neighbour[v].append(u)
+        self.neighbour[u].add(v)
+        self.neighbour[v].add(u)
 
         if (u,v) not in self.cap:
             self.cap[(u,v)] = 0
@@ -57,7 +54,8 @@ class FlowNetwork(object):
         while not q.empty():
             u = q.get()
             for v in self.neighbour[u]:
-                if self.cap[(u,v)] - self.flow[(u,v)] > 0 and parent[v] == -1:
+                if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
+                        and parent[v] == -1:
                     parent[v] = u
                     m[v] = min(m[u], self.cap[(u,v)] - self.flow[(u,v)])
                     if v != sink:
@@ -71,9 +69,7 @@ class FlowNetwork(object):
         nodes = len(self.neighbour)
     
         while True:
-    
             path, aug_flow = self.bfs(source, sink)
-            print sum(self.flow[(source,v)] for v in self.neighbour[source])
     
             if aug_flow == 0:
                 break
@@ -166,69 +162,63 @@ class FlowNetwork(object):
 
     def push(self, excess, u, v):
         f = min(excess[u], self.cap[(u,v)] - self.flow[(u,v)])
-        #print "Pushing %r from %r to %r" % (f, u, v)
         excess[u] -= f
         excess[v] += f
         self.flow[(u,v)] += f
         self.flow[(v,u)] -= f
-        return f != 0
 
     def relabel(self, height, u):
-        old = height[u]
-        #print "Relabel %r, height = %r, neighbour = %r" % (u, height[u],
-        #        self.neighbour[u])
-        #print [height[v] for v in self.neighbour[u] \
-        #        if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
-        #        ]
         height[u] = minimum((height[v] for v in self.neighbour[u] \
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
                 ), 0) + 1
-        #print "%r == %r" % (height[u], old)
-        return height[u] != old
 
     def min_cut_push_relabel(self, source, sink):
         excess = defaultdict(lambda: 0)
         height = defaultdict(lambda: 0)
-        excess[source] = 1000000 # FIXME: Infinity
+        excess[source] = 1000000
         height[source] = len(self.neighbour)
+
+        q = deque()
+        visited = set()
 
         # Initialization
         for v in self.neighbour[source]:
-            self.flow[(source,v)] = self.cap[(source,v)]
-            self.flow[(v,source)] = -self.cap[(source,v)]
-            excess[v] += self.cap[(source,v)]
+            excess[source] = 1000000
+            self.push(excess, source, v)
+            q.append(v)
+            visited.add(v)
+        
+        print "Initialization step done"
 
-        old = True
-        while old:
-            old = False
-            for u,v in self.cap.keys():
-                if not excess[u] > 0:
-                    continue
-                if height[u] != height[v] + 1:
-                    continue
-                new = self.push(excess, u, v)
-                old = old or new
+        while len(q) > 0:
+            u = q[0]
+            label = -1
+            for v in self.neighbour[u]:
+                if excess[u] == 0:
+                    break
+                if self.cap[(u,v)] - self.flow[(u,v)] > 0:
+                    if height[u] > height[v]:
+                        self.push(excess, u, v)
+                        if v not in visited and v != source and v != sink:
+                            q.append(v)
+                            visited.add(v)
 
-            for u in self.neighbour.keys():
-                cont = False
-                if u == sink or u == source:
-                    continue
-                if not excess[u] > 0:
-                    continue
-                for v in self.neighbour[u]:
-                    if self.cap[(u,v)] - self.flow[(u,v)] > 0:
-                        if height[u] > height[v]:
-                            cont = True
-                            break
-                if cont:
-                    continue
-                new = self.relabel(height, u)
-                old = old or new
-            #print "Flow:", self.flow
-            #print "Excess:", excess
-            #print "Height:", height
-            #stdin.readline()
+                    # Only if we did not push anything should the node
+                    # be counted in the relabeling move, since pushing
+                    # to a node either saturates the edge or removes the
+                    # excess completely.
+                    elif label == -1:
+                        label = height[v]
+                    else:
+                        label = min(label, height[v])
 
+            if excess[u] == 0:
+                q.popleft()
+                visited.remove(u)
+            else:
+                height[u] = label + 1
+
+        print "Flow done, finding cut"
         path, aug_flow = self.bfs(source, sink)
     
         A = set([v for v in path if v != -1 and v != -2])
@@ -274,7 +264,7 @@ def Ei(img, p, u):
             - f(130, img[p[0]][p[1]])) * (1 - u)
 
 def Eij(up, uq):
-    return 10 * ((1 - 2 * uq) * up + uq)
+    return 20 * ((1 - 2 * uq) * up + uq)
 
 def segment(ifile, ofile):
 
@@ -296,6 +286,7 @@ def segment(ifile, ofile):
     D = Eij(1, 1)
 
     for x in xrange(w):
+        #print "Line: %d" % x
         for y in xrange(h):
             e0 = Ei(img, (x, y), 0)
             e1 = Ei(img, (x, y), 1)
@@ -332,13 +323,20 @@ def segment(ifile, ofile):
 
     print "Network filled with edges, starting min-cut algorithm"
 
+    #for u in network.neighbour.keys():
+    #    for v in network.neighbour[u]:
+    #        print "%r: %d" % (v, network.cap[(u,v)]),
+    #    print
+
+    #A, B = network.min_cut_edmonds_karp('s', 't')
     A, B = network.min_cut_dinic('s', 't')
+    #A, B = network.min_cut_push_relabel('s', 't')
 
     print "Minimal cut found"
 
     A.remove('s')
     for x, y in A:
-        img[x][y] = 100
+        img[x][y] = 255
 
     B.remove('t')
     for x, y in B:
