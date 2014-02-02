@@ -166,7 +166,7 @@ class FlowNetwork(object):
 
     def push(self, excess, u, v):
         f = min(excess[u], self.cap[(u,v)] - self.flow[(u,v)])
-        print "Pushing %r from %r to %r" % (f, u, v)
+        #print "Pushing %r from %r to %r" % (f, u, v)
         excess[u] -= f
         excess[v] += f
         self.flow[(u,v)] += f
@@ -175,21 +175,28 @@ class FlowNetwork(object):
 
     def relabel(self, height, u):
         old = height[u]
-        print "Relabel %r, height = %r, neighbour = %r" % (u, height[u],
-                self.neighbour[u])
-        print [height[v] for v in self.neighbour[u] \
-                if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
-                ]
+        #print "Relabel %r, height = %r, neighbour = %r" % (u, height[u],
+        #        self.neighbour[u])
+        #print [height[v] for v in self.neighbour[u] \
+        #        if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
+        #        ]
         height[u] = minimum((height[v] for v in self.neighbour[u] \
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
                 ), 0) + 1
-        print "%r == %r" % (height[u], old)
+        #print "%r == %r" % (height[u], old)
         return height[u] != old
 
     def min_cut_push_relabel(self, source, sink):
         excess = defaultdict(lambda: 0)
         height = defaultdict(lambda: 0)
         excess[source] = 1000000 # FIXME: Infinity
+        height[source] = len(self.neighbour)
+
+        # Initialization
+        for v in self.neighbour[source]:
+            self.flow[(source,v)] = self.cap[(source,v)]
+            self.flow[(v,source)] = -self.cap[(source,v)]
+            excess[v] += self.cap[(source,v)]
 
         old = True
         while old:
@@ -204,34 +211,33 @@ class FlowNetwork(object):
 
             for u in self.neighbour.keys():
                 cont = False
-                if u == sink:
+                if u == sink or u == source:
                     continue
                 if not excess[u] > 0:
                     continue
                 for v in self.neighbour[u]:
                     if self.cap[(u,v)] - self.flow[(u,v)] > 0:
                         if height[u] > height[v]:
-                            print "cont = True"
                             cont = True
                             break
                 if cont:
                     continue
                 new = self.relabel(height, u)
                 old = old or new
-            print "Flow:", self.flow
-            print "Excess:", excess
-            print "Height:", height
-            stdin.readline()
+            #print "Flow:", self.flow
+            #print "Excess:", excess
+            #print "Height:", height
+            #stdin.readline()
 
         path, aug_flow = self.bfs(source, sink)
     
         A = set([v for v in path if v != -1 and v != -2])
         A.add(source)
 
-        print self.cap
-        print self.flow
-        print excess
-        print height
+        #print self.cap
+        #print self.flow
+        #print excess
+        #print height
         return A, set(self.neighbour.keys()).difference(A)
 
 def simple_test():
@@ -343,7 +349,7 @@ def segment(ifile, ofile):
 
     mh.imsave(ofile, img)
 
-simple_test()
+#simple_test()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -353,5 +359,5 @@ def main():
 
     segment(args.ifile, args.ofile)
 
-#main()
+main()
 
