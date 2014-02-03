@@ -8,6 +8,7 @@ import numpy as np
 import mahotas as mh
 import matplotlib.pyplot as plt
 import argparse
+import time
 
 def minimum(iterable, default=0):
     try:
@@ -114,21 +115,86 @@ class FlowNetwork(object):
 
         return throughput
 
-    def blocking_flow_nonrecursive(self, level, source, sink, limit):
+    def dfs(self, level, source, sink):
+        print "Starting DFS"
+        parent = defaultdict(lambda: -1)
+        parent[source] = -2
+    
+        m = defaultdict(lambda: 0)
+        m[source] = 100000000 # FIXME: infinity
+
         q = []
         q.append(source)
 
-        visited = set()
-        throughput = defaultset(lambda: 0)
+        sink_neighbours = []
+
         while len(q) > 0:
             u = q.pop()
-            if u not in visited:
-                visited.add(u)
-                q.append(u)
-                q.extend(self.neighbour[u])
-            else:
-                pass
-                #postprocess(u)
+            for v in self.neighbour[u]:
+                residual = self.cap[(u,v)] - self.flow[(u,v)]
+                if level[v] == level[u] + 1 and residual > 0:
+                    if v == sink:
+                        sink_neighbours.append(u)
+                        continue
+
+                    parent[v] = u
+                    m[v] += min(m[u], self.cap[(u,v)] - self.flow[(u,v)])
+
+                    q.append(v)
+    
+        return parent, 0
+
+    def blocking_flow_nonrecursive(self, level, source, sink):
+        print "Starting blocking flow loop"
+        while True:
+            path, aug_flow = self.dfs(level, source, sink)
+
+            print "aug_flow = %d" % aug_flow
+    
+            if aug_flow == 0:
+                break
+    
+            v = sink
+            while v != source:
+                u = path[v]
+    
+                self.flow[(u,v)] += aug_flow
+                self.flow[(v,u)] -= aug_flow
+    
+                v = u
+
+    def blocking_flow_take3(self, level, source, sink):
+        parent = defaultdict(lambda: -1)
+        parent[source] = -2
+    
+        m = defaultdict(lambda: 0)
+        m[source] = 100000000 # FIXME: infinity
+
+        q = []
+        q.append(source)
+        while len(q) > 0:
+            u = q.pop()
+            if u == sink:
+                aug_flow = m[sink]
+                v == sink
+                while v != source:
+                    u = parent[v]
+    
+                    self.flow[(u,v)] += aug_flow
+                    self.flow[(v,u)] -= aug_flow
+                    m[u] -= aug_flow
+    
+                    v = u
+
+                continue
+
+            for v in self.neighbour[u]:
+                residual = self.cap[(u,v)] - self.flow[(u,v)]
+                if residual > 0 and level[v] == level[u] + 1:
+                    parent[v] = u
+                    m[v] = min(m[u], residual)
+                    q.append(v)
+
 
     def min_cut_dinic(self, source, sink):
         while True:
@@ -151,7 +217,12 @@ class FlowNetwork(object):
             if level[sink] == -1:
                 break
 
-            self.blocking_flow(level, source, source, sink, 1000000000)
+            #self.blocking_flow(level, source, source, sink, 1000000000)
+            self.blocking_flow_take3(
+                    level,
+                    source,
+                    sink
+                    )
     
         path, aug_flow = self.bfs(source, sink)
     
@@ -251,8 +322,8 @@ def simple_test():
             if arr[i][j] != 0:
                 network.add_edge(i, j, arr[i][j])
 
-    #A, B = network.min_cut_dinic(source, sink)
-    A, B = network.min_cut_push_relabel(source, sink)
+    A, B = network.min_cut_dinic(source, sink)
+    #A, B = network.min_cut_push_relabel(source, sink)
 
     print A, B
 
@@ -271,9 +342,7 @@ def segment(ifile, ofile):
     img = mh.imread(ifile)
     print "Loaded Lena"
 
-    #pylab.imshow(img, cmap=pylab.gray())
-    #pylab.show()
-
+    start = time.clock()
     network = FlowNetwork()
     print "Empty network created"
 
@@ -321,8 +390,12 @@ def segment(ifile, ofile):
 
                 network.add_edge((x, y), (x, y+1), B + C - A - D)
 
-    print "Network filled with edges, starting min-cut algorithm"
+    end = time.clock()
+    tot_time = end - start
+    print "Network created: %f" % (end - start)
+    print "Starting min-cut algorithm"
 
+    start = time.clock()
     #for u in network.neighbour.keys():
     #    for v in network.neighbour[u]:
     #        print "%r: %d" % (v, network.cap[(u,v)]),
@@ -332,7 +405,12 @@ def segment(ifile, ofile):
     A, B = network.min_cut_dinic('s', 't')
     #A, B = network.min_cut_push_relabel('s', 't')
 
-    print "Minimal cut found"
+    end = time.clock()
+    tot_time += end - start
+    print "Minimal cut found: %f" % (end - start)
+
+    print "Min cut took %f%% of the time" \
+            % ((end - start) * 100.0 / tot_time)
 
     A.remove('s')
     for x, y in A:
@@ -342,12 +420,9 @@ def segment(ifile, ofile):
     for x, y in B:
         img[x][y] = 0
 
-    #pylab.imshow(img, cmap=pylab.gray())
-    #pylab.show()
-
     mh.imsave(ofile, img)
 
-#simple_test()
+simple_test()
 
 def main():
     parser = argparse.ArgumentParser()
