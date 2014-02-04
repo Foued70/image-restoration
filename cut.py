@@ -119,35 +119,6 @@ class FlowNetwork(object):
 
         return throughput
 
-    def dfs(self, level, source, sink):
-        print "Starting DFS"
-        parent = defaultdict(lambda: -1)
-        parent[source] = -2
-    
-        m = defaultdict(lambda: 0)
-        m[source] = 100000000 # FIXME: infinity
-
-        q = []
-        q.append(source)
-
-        sink_neighbours = []
-
-        while len(q) > 0:
-            u = q.pop()
-            for v in self.neighbour[u]:
-                residual = self.cap[(u,v)] - self.flow[(u,v)]
-                if level[v] == level[u] + 1 and residual > 0:
-                    if v == sink:
-                        sink_neighbours.append(u)
-                        continue
-
-                    parent[v] = u
-                    m[v] += min(m[u], self.cap[(u,v)] - self.flow[(u,v)])
-
-                    q.append(v)
-    
-        return parent, 0
-
     def min_cut_dinic(self, source, sink):
         while True:
             level = defaultdict(lambda: -1)
@@ -190,64 +161,76 @@ class FlowNetwork(object):
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
                 ), 0) + 1
 
-    def global_relabel(self, height, source, sink):
-        print "Doing global relabeling"
-        q = Queue()
-    
-        q.put((sink, 0))
+    def global_relabel(self, excess, height, source, sink):
+        q = deque()
+        height[sink] = 0
+        q.append((sink, 0))
         visited = set()
-        while not q.empty():
+
+        while len(q) > 0: #not q.empty():
             # NOTE: Reverse BFS
-            v, h = q.get()
+            v, h = q.popleft()
             visited.add(v)
             h += 1
             for u in self.neighbour[v]:
                 if u in visited:
                     continue
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0:
-                    q.put((u, h))
                     height[u] = h
+                    q.append((u, h))
+
+        #height[source] = len(self.neighbour)
 
     def min_cut_push_relabel(self, source, sink):
         excess = defaultdict(lambda: 0)
         height = defaultdict(lambda: 0)
-        current = defaultdict(lambda: 0)
         excess[source] = 1000000
 
         # FIFO implementation
         q = deque()
 
-        # Source is the only active node
-        q.append(source)
+        # Initialize labels
+        #self.global_relabel(height, source, sink)
+        height[source] = len(self.neighbour)
 
-        self.global_relabel(height, source, sink)
+        # Initialize flow
+        for v in self.neighbour[source]:
+            excess[source] = 100000000
+            self.push(excess, source, v)
+            q.append(v)
 
-        print height
-        stdin.readline()
+        print "Flow at start:",
+        print sum(self.flow[(source,v)] for v in self.neighbour[source])
 
+        excess[source] = 100000000
+        i = 1
         while len(q) > 0:
-            u = q[0]
-            print "At %r" % u
+            u = q.popleft()
+
+            if i % 1000 == 0:
+                self.global_relabel(excess, height, source, sink)
+            i += 1
 
             for v in self.neighbour[u]:
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0:
                     if height[u] == height[v] + 1:
                         self.push(excess, u, v)
-                        if v != sink and v != source:
+                        if v != source and v != sink:
                             q.append(v)
 
                 if excess[u] == 0:
                     break
 
-            current[u] += i
-
-            if v == self.neighbour[u][-1]:
-                current[u] = 0
+            if excess[u] > 0:
                 self.relabel(height, u)
-            if excess[u] == 0:
-                q.popleft()
+                q.append(u)
+
+        print i
 
         print "Flow done, finding cut"
+        print "Flow at end:",
+        print sum(self.flow[(source,v)] for v in self.neighbour[source])
+
         path, aug_flow = self.bfs(source, sink)
     
         A = set([v for v in path if v != -1 and v != -2])
@@ -255,7 +238,7 @@ class FlowNetwork(object):
 
         #print self.cap
         #print self.flow
-        #print excess
+        print [e for e in excess.keys() if excess[e] > 0]
         #print height
         return A, set(self.neighbour.keys()).difference(A)
 
