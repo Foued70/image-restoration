@@ -41,6 +41,10 @@ class FlowNetwork(object):
         self.flow[(u,v)] = 0
         self.flow[(v,u)] = 0
 
+    def create_adjacency_lists(self):
+        for u in self.neighbour.keys():
+            self.neighbour[u] = list(self.neighbour[u])
+
     def bfs(self, source, sink):
         nodes = len(self.neighbour)
 
@@ -144,58 +148,6 @@ class FlowNetwork(object):
     
         return parent, 0
 
-    def blocking_flow_nonrecursive(self, level, source, sink):
-        print "Starting blocking flow loop"
-        while True:
-            path, aug_flow = self.dfs(level, source, sink)
-
-            print "aug_flow = %d" % aug_flow
-    
-            if aug_flow == 0:
-                break
-    
-            v = sink
-            while v != source:
-                u = path[v]
-    
-                self.flow[(u,v)] += aug_flow
-                self.flow[(v,u)] -= aug_flow
-    
-                v = u
-
-    def blocking_flow_take3(self, level, source, sink):
-        parent = defaultdict(lambda: -1)
-        parent[source] = -2
-    
-        m = defaultdict(lambda: 0)
-        m[source] = 100000000 # FIXME: infinity
-
-        q = []
-        q.append(source)
-        while len(q) > 0:
-            u = q.pop()
-            if u == sink:
-                aug_flow = m[sink]
-                v == sink
-                while v != source:
-                    u = parent[v]
-    
-                    self.flow[(u,v)] += aug_flow
-                    self.flow[(v,u)] -= aug_flow
-                    m[u] -= aug_flow
-    
-                    v = u
-
-                continue
-
-            for v in self.neighbour[u]:
-                residual = self.cap[(u,v)] - self.flow[(u,v)]
-                if residual > 0 and level[v] == level[u] + 1:
-                    parent[v] = u
-                    m[v] = min(m[u], residual)
-                    q.append(v)
-
-
     def min_cut_dinic(self, source, sink):
         while True:
             level = defaultdict(lambda: -1)
@@ -217,12 +169,7 @@ class FlowNetwork(object):
             if level[sink] == -1:
                 break
 
-            #self.blocking_flow(level, source, source, sink, 1000000000)
-            self.blocking_flow_take3(
-                    level,
-                    source,
-                    sink
-                    )
+            self.blocking_flow(level, source, source, sink, 1000000000)
     
         path, aug_flow = self.bfs(source, sink)
     
@@ -243,51 +190,62 @@ class FlowNetwork(object):
                 if self.cap[(u,v)] - self.flow[(u,v)] > 0 \
                 ), 0) + 1
 
+    def global_relabel(self, height, source, sink):
+        print "Doing global relabeling"
+        q = Queue()
+    
+        q.put((sink, 0))
+        visited = set()
+        while not q.empty():
+            # NOTE: Reverse BFS
+            v, h = q.get()
+            visited.add(v)
+            h += 1
+            for u in self.neighbour[v]:
+                if u in visited:
+                    continue
+                if self.cap[(u,v)] - self.flow[(u,v)] > 0:
+                    q.put((u, h))
+                    height[u] = h
+
     def min_cut_push_relabel(self, source, sink):
         excess = defaultdict(lambda: 0)
         height = defaultdict(lambda: 0)
+        current = defaultdict(lambda: 0)
         excess[source] = 1000000
-        height[source] = len(self.neighbour)
 
+        # FIFO implementation
         q = deque()
-        visited = set()
 
-        # Initialization
-        for v in self.neighbour[source]:
-            excess[source] = 1000000
-            self.push(excess, source, v)
-            q.append(v)
-            visited.add(v)
-        
-        print "Initialization step done"
+        # Source is the only active node
+        q.append(source)
+
+        self.global_relabel(height, source, sink)
+
+        print height
+        stdin.readline()
 
         while len(q) > 0:
             u = q[0]
-            label = -1
+            print "At %r" % u
+
             for v in self.neighbour[u]:
+                if self.cap[(u,v)] - self.flow[(u,v)] > 0:
+                    if height[u] == height[v] + 1:
+                        self.push(excess, u, v)
+                        if v != sink and v != source:
+                            q.append(v)
+
                 if excess[u] == 0:
                     break
-                if self.cap[(u,v)] - self.flow[(u,v)] > 0:
-                    if height[u] > height[v]:
-                        self.push(excess, u, v)
-                        if v not in visited and v != source and v != sink:
-                            q.append(v)
-                            visited.add(v)
 
-                    # Only if we did not push anything should the node
-                    # be counted in the relabeling move, since pushing
-                    # to a node either saturates the edge or removes the
-                    # excess completely.
-                    elif label == -1:
-                        label = height[v]
-                    else:
-                        label = min(label, height[v])
+            current[u] += i
 
+            if v == self.neighbour[u][-1]:
+                current[u] = 0
+                self.relabel(height, u)
             if excess[u] == 0:
                 q.popleft()
-                visited.remove(u)
-            else:
-                height[u] = label + 1
 
         print "Flow done, finding cut"
         path, aug_flow = self.bfs(source, sink)
@@ -322,8 +280,9 @@ def simple_test():
             if arr[i][j] != 0:
                 network.add_edge(i, j, arr[i][j])
 
-    A, B = network.min_cut_dinic(source, sink)
-    #A, B = network.min_cut_push_relabel(source, sink)
+    network.create_adjacency_lists()
+    #A, B = network.min_cut_dinic(source, sink)
+    A, B = network.min_cut_push_relabel(source, sink)
 
     print A, B
 
@@ -390,6 +349,7 @@ def segment(ifile, ofile):
 
                 network.add_edge((x, y), (x, y+1), B + C - A - D)
 
+    network.create_adjacency_lists()
     end = time.clock()
     tot_time = end - start
     print "Network created: %f" % (end - start)
@@ -402,8 +362,8 @@ def segment(ifile, ofile):
     #    print
 
     #A, B = network.min_cut_edmonds_karp('s', 't')
-    A, B = network.min_cut_dinic('s', 't')
-    #A, B = network.min_cut_push_relabel('s', 't')
+    #A, B = network.min_cut_dinic('s', 't')
+    A, B = network.min_cut_push_relabel('s', 't')
 
     end = time.clock()
     tot_time += end - start
