@@ -171,6 +171,7 @@ bool test2(void)
 	network.AddEdge(1, 3, 9);
 	network.AddEdge(2, 3, 9);
 
+	cout << "Running push-relabel" << endl;
 	network.MinCutPushRelabel(0, 3);
 	
 	for (int i = 0; i < network.cut.size(); ++i) {
