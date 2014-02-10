@@ -34,3 +34,19 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Binaries
+image-restoration
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# Valgrind
+callgrind.out.*
+
+# Output
+out.bmp
+
