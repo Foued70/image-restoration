@@ -37,6 +37,8 @@ nosetests.xml
 
 # Binaries
 image-restoration
+avg
+imgdiff
 
 # CMake
 CMakeCache.txt
