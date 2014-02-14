@@ -65,8 +65,8 @@ public:
 			G[to][G[from][index].index].flow = -cap;
 		}
 
-		assert(excess[from] >= 0);
-		assert(excess[to]   >= 0);
+		//assert(excess[from] >= 0);
+		//assert(excess[to]   >= 0);
 
 		//Enqueue(from);
 		//Enqueue(to);
@@ -124,10 +124,10 @@ public:
 			if (height[i] == N) continue;
 			count[height[i]]--;
 			height[i] = N;
-			c++;
+			//c++;
 			count[N]++;
 		}
-		cout << "Gapped: " << c << endl;
+		//cout << "Gapped: " << c << endl;
 	}
 
 	void Discharge(int u) {
@@ -282,19 +282,19 @@ public:
 	}
 
 	void MinCutPushRelabel(int source, int sink) {
-		fill(count.begin(), count.end(), 0);
+		//fill(count.begin(), count.end(), 0);
 		//fill(height.begin(), height.end(), 0);
-		fill(active.begin(), active.end(), false);
+		//fill(active.begin(), active.end(), false);
 
 		//ResetFlow();
 
 		height[source] = N;
 
 		active[source] = active[sink] = true;
-		for (int i = 0; i < N; ++i) {
-			count[height[i]]++;
-			//if (excess[i] > 0) Enqueue(i);
-		}
+		//for (int i = 0; i < N; ++i) {
+		//	count[height[i]]++;
+		//	//if (excess[i] > 0) Enqueue(i);
+		//}
 
 		//double avg = GlobalRelabel(source, sink);
 
@@ -345,7 +345,7 @@ public:
 		//cout << "Inflow: " << InFlow(sink) << endl;
 		//cout << "Total height: " << TotalHeight() << endl;
 
-		fill(cut.begin(), cut.end(), false);
+		//fill(cut.begin(), cut.end(), false);
 		for (int i = 0; i < cut.size(); ++i) {
 			cut[i] = height[i] >= N;
 		}

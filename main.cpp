@@ -37,10 +37,10 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	test1();
-	cout << endl;
-	test2();
-	cout << endl;
+	//test1();
+	//cout << endl;
+	//test2();
+	//cout << endl;
 
 	int rows = image.rows;
 	int cols = image.cols;
@@ -49,12 +49,12 @@ int main(int argc, char *argv[])
 	int out_sum = 0;
 
 	Mat out = image.clone();
-	for (int j = 0; j < rows; ++j) {
-		for (int i = 0; i < cols; ++i) {
-			in_sum += image.at<uchar>(j, i);
-			out.at<uchar>(j, i) = 255;
-		}
-	}
+	//for (int j = 0; j < rows; ++j) {
+	//	for (int i = 0; i < cols; ++i) {
+	//		in_sum += image.at<uchar>(j, i);
+	//		out.at<uchar>(j, i) = 255;
+	//	}
+	//}
 
 	int beta = atoi(argv[2]);
 	int A = Eij(beta, 0, 0);
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	}
 
 	for (int label = 255; label >= 0; --label) {
-		cout << "LABEL: " << label << endl;
+		//cout << "LABEL: " << label << endl;
 
 		vector<int> s_caps(pixels);
 		vector<int> t_caps(pixels);
@@ -150,12 +150,12 @@ int main(int argc, char *argv[])
 		}
 
 		//network.ResetFlow();
-		cout << "Source out capacity: " << network.OutCap(source) << endl;
-		cout << "Sink in capacity: " << network.InCap(sink) << endl;
-		cout << "Starting min cut algorithm" << endl;
+		//cout << "Source out capacity: " << network.OutCap(source) << endl;
+		//cout << "Sink in capacity: " << network.InCap(sink) << endl;
+		//cout << "Starting min cut algorithm" << endl;
 		//network.MinCutDinic(source, sink);
 		network.MinCutPushRelabel(source, sink);
-		cout << "Active nodes: " << network.ActiveNodes() << endl;
+		//cout << "Active nodes: " << network.ActiveNodes() << endl;
 
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {
@@ -165,21 +165,21 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	for (int j = 0; j < rows; ++j) {
-		for (int i = 0; i < cols; ++i) {
-			out_sum += out.at<uchar>(j, i);
-		}
-	}
+	//for (int j = 0; j < rows; ++j) {
+	//	for (int i = 0; i < cols; ++i) {
+	//		out_sum += out.at<uchar>(j, i);
+	//	}
+	//}
 
 	//namedWindow("Display image", CV_WINDOW_AUTOSIZE);
 	//imshow("Display image", out);
 	//waitKey(0);
 	imwrite(argv[3], out);
 
-	cout << "Input image pixel average: ";
-	cout << static_cast<double>(in_sum) / pixels << endl;
-	cout << "Output image pixel average: ";
-	cout << static_cast<double>(out_sum) / pixels << endl;
+	//cout << "Input image pixel average: ";
+	//cout << static_cast<double>(in_sum) / pixels << endl;
+	//cout << "Output image pixel average: ";
+	//cout << static_cast<double>(out_sum) / pixels << endl;
 
 	return 0;
 }
