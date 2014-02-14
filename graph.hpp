@@ -4,6 +4,7 @@
 #include <queue>
 #include <vector>
 #include <stack>
+#include <cassert>
 
 using namespace std;
 
@@ -26,7 +27,6 @@ private:
 	vector<vector<Edge> > G;
 	vector<int> excess;
 	vector<int> height;
-	vector<int> edge;
 	vector<int> count;
 	vector<bool> active;
 	queue<int> q;
@@ -34,12 +34,51 @@ private:
 public:
 	vector<bool> cut;
 
-	PushRelabel(int N) : N(N), G(N), excess(N), height(N), active(N), cut(N), edge(N), count(N+1) {}
+	PushRelabel(int N) :
+		N(N),
+		G(N),
+		excess(N),
+		height(N),
+		active(N),
+		cut(N),
+		count(N+1) {}
 
-	void AddEdge(int from, int to, int cap) {
+	int AddEdge(int from, int to, int cap) {
 		G[from].push_back(Edge(from, to, cap, G[to].size()));
 		if (from == to) G[from].back().index++;
-		G[to].push_back(Edge(to, from, 0, G[from].size()-1));
+		int index = G[from].size() - 1;
+		G[to].push_back(Edge(to, from, 0, index));
+
+		return index;
+	}
+
+	void ChangeCapacity(int from, int index, int cap) {
+		int to = G[from][index].to;
+		int diff = G[from][index].flow - cap;
+
+		G[from][index].cap = cap;
+
+		if (diff > 0) {
+			excess[from] += diff;
+			excess[to] -= diff;
+			G[from][index].flow = cap;
+			G[to][G[from][index].index].flow = -cap;
+		}
+
+		assert(excess[from] >= 0);
+		assert(excess[to]   >= 0);
+
+		//Enqueue(from);
+		//Enqueue(to);
+	}
+
+	void ResetFlow() {
+		for (int i = 0; i < G.size(); ++i) {
+			for (int j = 0; j < G[i].size(); ++j) {
+				G[i][j].flow = 0;
+			}
+			excess[i] = 0;
+		}
 	}
 	
 	void Push(Edge &e) {
@@ -87,24 +126,19 @@ public:
 			height[i] = N;
 			c++;
 			count[N]++;
-			//Enqueue(i);
 		}
 		cout << "Gapped: " << c << endl;
 	}
 
 	void Discharge(int u) {
 		int i;
-		for (i = edge[u]; i < G[u].size(); ++i) {
+		for (i = 0; i < G[u].size() && excess[u] > 0; ++i) {
 			if (G[u][i].cap > G[u][i].flow
 					&& height[u] == height[G[u][i].to] + 1) {
 				Push(G[u][i]);
 			}
-			if (excess[u] == 0) break;
 		}
 		
-		if (i == G[u].size()) edge[u] = 0;
-		else edge[u] = i;
-
 		if (excess[u] > 0) {
 			if (count[height[u]] == 1)
 				Gap(height[u]);
@@ -146,8 +180,7 @@ public:
 				if (cut[G[u][i].to]) continue;
 
 				if (G[u][i].cap > G[u][i].flow) {
-					if (G[u][i].to == sink)
-						cout << "OOOOOOOOOOOOOPS" << endl;
+					assert(G[u][i].to != sink);
 					cut[G[u][i].to] = true;
 					s.push(G[u][i].to);
 				}
@@ -155,7 +188,7 @@ public:
 		}
 	}
 
-	void GlobalRelabel(int source, int sink) {
+	double GlobalRelabel(int source, int sink) {
 		queue<int> nq;
 		queue<int> hq;
 		vector<bool> visited(N);
@@ -188,14 +221,16 @@ public:
 					c++;
 					s += h;
 					visited[from] = true;
-					//Enqueue(from);
+					Enqueue(from);
 					nq.push(from);
 					hq.push(h);
 				}
 			}
 		}
 		cout << "Relabeled: " << c << endl;
-		cout << "Avg: " << s / (double)c << endl;
+		cout << "Avg: " << static_cast<double>(s) / c << endl;
+
+		return static_cast<double>(s) / c;
 	}
 
 	int ActiveNodes(void) {
@@ -247,20 +282,41 @@ public:
 	}
 
 	void MinCutPushRelabel(int source, int sink) {
+		fill(count.begin(), count.end(), 0);
+		//fill(height.begin(), height.end(), 0);
+		fill(active.begin(), active.end(), false);
 
-		count[0] = N-1;
-		count[N] = 1;
+		//ResetFlow();
+
 		height[source] = N;
 
 		active[source] = active[sink] = true;
+		for (int i = 0; i < N; ++i) {
+			count[height[i]]++;
+			//if (excess[i] > 0) Enqueue(i);
+		}
 
-		GlobalRelabel(source, sink);
+		//double avg = GlobalRelabel(source, sink);
 
 		for (int i = 0; i < G[source].size(); ++i) {
 			excess[source] = G[source][i].cap;
 			Push(G[source][i]);
 		}
 		excess[source] = 0;
+
+		//for (int i = 0; i < N; ++i) {
+		//	if (excess[i] > 0) Enqueue(i);
+		//}
+
+		//cout << "Checking excess." << endl;
+		//assert(CheckExcess());
+		//cout << "Checking capacities vs. flow." << endl;
+		//assert(CheckCapacity());
+		//cout << "Checking labels." << endl;
+		//assert(CheckLabels());
+		//cout << "Checking count." << endl;
+		//assert(CheckCount());
+		//cout << "Everything A OK." << endl;
 
 		//PrintGraph();
 
@@ -289,14 +345,66 @@ public:
 		//cout << "Inflow: " << InFlow(sink) << endl;
 		//cout << "Total height: " << TotalHeight() << endl;
 
+		fill(cut.begin(), cut.end(), false);
 		for (int i = 0; i < cut.size(); ++i) {
 			cut[i] = height[i] >= N;
 		}
 	}
 
+	bool CheckExcess(void) {
+		for (int i = 0; i < excess.size(); ++i) {
+			if (excess[i] < 0) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool CheckCapacity(void) {
+		for (int i = 0; i < G.size(); ++i) {
+			for (int j = 0; j < G[i].size(); ++j) {
+				if (G[i][j].flow > G[i][j].cap) return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool CheckLabels(void) {
+		for (int i = 0; i < G.size(); ++i) {
+			for (int j = 0; j < G[i].size(); ++j) {
+				if (G[i][j].flow < G[i][j].cap) {
+					if (height[i] > height[G[i][j].to] + 1) {
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	bool CheckCount(void) {
+		for (int i = 0; i < count.size(); ++i) {
+			int c = 0;
+			for (int j = 0; j < height.size(); ++j) {
+				if (height[j] == i) c++;
+			}
+			if (c != count[i]) {
+				cout << "c = " << c << ", count[" << i << "] = ";
+				cout << count[i] << endl;
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void MinCutDinic(int source, int sink) {
 		cout << "Flow = " << MaxFlowDinic(source, sink) << endl;
 		cout << "Starting DFS." << endl;
+		fill(cut.begin(), cut.end(), false);
 		DFS(source, sink);
 		cout << "DFS finished." << endl;
 	}
@@ -310,7 +418,13 @@ public:
 		for (int i = 0; i < G[u].size(); ++i) {
 			int res = G[u][i].cap - G[u][i].flow;
 			if (level[G[u][i].to] == level[u] + 1 && res > 0) {
-				int aug = BlockingFlow(level, G[u][i].to, source, sink, min(limit - throughput, res));
+				int aug = BlockingFlow(
+						level,
+						G[u][i].to,
+						source,
+						sink,
+						min(limit - throughput, res)
+						);
 
 				throughput += aug;
 				G[u][i].flow += aug;
