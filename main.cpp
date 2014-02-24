@@ -73,6 +73,13 @@ int main(int argc, char *argv[])
 	vector<int> s_index(pixels);
 	vector<int> t_index(pixels);
 
+	for (int i = 0; i < pixels; ++i) {
+		t_index[i] = network.AddEdge(i, sink, 0);
+	}
+	for (int i = 0; i < pixels; ++i) {
+		s_index[i] = network.AddEdge(source, i, 0);
+	}
+
 	for (int j = 0; j < rows; ++j) {
 		for (int i = 0; i < cols; ++i) {
 			if (i + 1 < cols)
@@ -80,13 +87,6 @@ int main(int argc, char *argv[])
 			if (j + 1 < rows)
 				network.AddEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
 		}
-	}
-
-	for (int i = 0; i < pixels; ++i) {
-		t_index[i] = network.AddEdge(i, sink, 0);
-	}
-	for (int i = 0; i < pixels; ++i) {
-		s_index[i] = network.AddEdge(source, i, 0);
 	}
 
 	for (int label = 255; label >= 0; --label) {
