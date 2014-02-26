@@ -63,12 +63,12 @@ public:
 			excess[to] -= diff;
 			G[from][index].flow = cap;
 			G[to][G[from][index].index].flow = -cap;
+			Enqueue(from);
 		}
 
 		//assert(excess[from] >= 0);
 		//assert(excess[to]   >= 0);
 
-		//Enqueue(from);
 		//Enqueue(to);
 	}
 
