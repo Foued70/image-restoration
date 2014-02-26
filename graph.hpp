@@ -28,7 +28,7 @@ private:
 	vector<int> excess;
 	vector<int> height;
 	vector<int> count;
-	vector<bool> active;
+	vector<char> active;
 	queue<int> q;
 
 public:
