@@ -90,11 +90,12 @@ int main(int argc, char *argv[])
 	}
 
 	for (int label = 255; label >= 0; --label) {
-		//cout << "LABEL: " << label << endl;
+		cout << "Label: " << label << endl;
 
 		vector<int> s_caps(pixels);
 		vector<int> t_caps(pixels);
 
+		//cout << "Calculating source and sink edge capacities." << endl;
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {
 				int e0 = Ei(label, image.at<uchar>(j, i), 0);
@@ -141,10 +142,12 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		//cout << "Changing source edge capacities." << endl;
 		for (int i = 0; i < s_caps.size(); ++i) {
 			network.ChangeCapacity(source, s_index[i], s_caps[i]);
 		}
 
+		//cout << "Changing sink edge capacities." << endl;
 		for (int i = 0; i < t_caps.size(); ++i) {
 			network.ChangeCapacity(i, t_index[i], t_caps[i]);
 		}
