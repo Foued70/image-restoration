@@ -3,12 +3,13 @@
 #include <cmath>
 #include <opencv2/opencv.hpp>
 #include "graph.hpp"
+#include "selectionrule.hpp"
 
 using namespace std;
 using namespace cv;
 
-bool test1(void);
-bool test2(void);
+//bool test1(void);
+//bool test2(void);
 
 int f(int u, int v) {
 	return (u - v) * (u - v);
@@ -21,6 +22,13 @@ int Ei(int label, int pix, int u) {
 int Eij(int b, int up, int uq) {
 	return b * ((1 - 2 * uq) * up + uq);
 }
+
+/*
+0 0 -> 0 * b
+0 1 -> 1 * b
+1 0 -> 1 * b
+1 1 -> 0 * b
+*/
 
 int main(int argc, char *argv[])
 {
@@ -62,7 +70,14 @@ int main(int argc, char *argv[])
 	int C = Eij(beta, 1, 0);
 	int D = Eij(beta, 1, 1);
 
-	PushRelabel network(pixels + 2);
+	cout << "A = " << A << endl;
+	cout << "B = " << B << endl;
+	cout << "C = " << C << endl;
+	cout << "D = " << D << endl;
+
+	HighestLevelRule hrule = HighestLevelRule(pixels + 2);
+	FIFORule frule = FIFORule(pixels + 2);
+	FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(hrule));
 
 	int source = pixels;
 	int sink   = pixels + 1;
@@ -74,24 +89,24 @@ int main(int argc, char *argv[])
 	vector<int> t_index(pixels);
 
 	for (int i = 0; i < pixels; ++i) {
-		t_index[i] = network.AddEdge(i, sink, 0);
+		t_index[i] = network.addEdge(i, sink, 0);
 	}
 	for (int i = 0; i < pixels; ++i) {
-		s_index[i] = network.AddEdge(source, i, 0);
+		s_index[i] = network.addEdge(source, i, 0);
 	}
 
 	for (int j = 0; j < rows; ++j) {
 		for (int i = 0; i < cols; ++i) {
 			if (i + 1 < cols)
-				network.AddEdge(j*cols + i, j*cols + i + 1, B+C-A-D);
+				network.addEdge(j*cols + i, j*cols + i + 1, B+C-A-D);
 			if (j + 1 < rows)
-				network.AddEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
+				network.addEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
+			network.setValue(j*cols + i, image.at<uchar>(j, i));
 		}
 	}
 
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
-
 		vector<int> s_caps(pixels);
 		vector<int> t_caps(pixels);
 
@@ -109,47 +124,51 @@ int main(int argc, char *argv[])
 				}
 
 				if (i + 1 < cols) {
-					if (C - A > 0) {
+					//if (C - A > 0) {
 						s_caps[j*cols + i] += C - A;
-					}
-					else {
-						t_caps[j*cols + i] += A - C;
-					}
+					//}
+					//else {
+					//	t_caps[j*cols + i] += A - C;
+					//}
 
-					if (D - C > 0) {
-						s_caps[j*cols + i + 1] += D - C;
-					}
-					else {
+					//if (D - C > 0) {
+					//	s_caps[j*cols + i + 1] += D - C;
+					//}
+					//else {
 						t_caps[j*cols + i + 1] += C - D;
-					}
+					//}
 				}
 
 				if (j + 1 < rows) {
-					if (C - A > 0) {
+					//if (C - A > 0) {
 						s_caps[j*cols + i] += C - A;
-					}
-					else {
-						t_caps[j*cols + i] += A - C;
-					}
+					//}
+					//else {
+					//	t_caps[j*cols + i] += A - C;
+					//}
 
-					if (D - C > 0) {
-						s_caps[(j+1)*cols + i] += D - C;
-					}
-					else {
+					//if (D - C > 0) {
+					//	s_caps[(j+1)*cols + i] += D - C;
+					//}
+					//else {
 						t_caps[(j+1)*cols + i] += C - D;
-					}
+					//}
 				}
 			}
 		}
 
 		//cout << "Changing source edge capacities." << endl;
 		for (int i = 0; i < s_caps.size(); ++i) {
-			network.ChangeCapacity(source, s_index[i], s_caps[i]);
+			if (!network.cut[i]) {
+				network.changeCapacity(source, s_index[i], s_caps[i]);
+			}
 		}
 
 		//cout << "Changing sink edge capacities." << endl;
 		for (int i = 0; i < t_caps.size(); ++i) {
-			network.ChangeCapacity(i, t_index[i], t_caps[i]);
+			if (!network.cut[i]) {
+				network.changeCapacity(i, t_index[i], t_caps[i]);
+			}
 		}
 
 		//network.ResetFlow();
@@ -157,7 +176,7 @@ int main(int argc, char *argv[])
 		//cout << "Sink in capacity: " << network.InCap(sink) << endl;
 		//cout << "Starting min cut algorithm" << endl;
 		//network.MinCutDinic(source, sink);
-		network.MinCutPushRelabel(source, sink);
+		network.minCutPushRelabel(source, sink);
 		//cout << "Active nodes: " << network.ActiveNodes() << endl;
 
 		for (int j = 0; j < rows; ++j) {
@@ -167,6 +186,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	cout << endl;
 
 	//for (int j = 0; j < rows; ++j) {
 	//	for (int i = 0; i < cols; ++i) {
@@ -187,37 +208,37 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-bool test1(void)
-{
-	PushRelabel network(4);
-	network.AddEdge(0, 1, 10);
-	network.AddEdge(0, 2, 10);
-	network.AddEdge(1, 2, 1);
-	network.AddEdge(1, 3, 9);
-	network.AddEdge(2, 3, 9);
-
-	int flow = network.MaxFlowDinic(0, 3);
-	
-	cout << "test1: flow: " << flow << endl;
-
-	return flow == 18;
-}
-
-bool test2(void)
-{
-	PushRelabel network(4);
-	network.AddEdge(0, 1, 10);
-	network.AddEdge(0, 2, 10);
-	network.AddEdge(1, 2, 1);
-	network.AddEdge(1, 3, 9);
-	network.AddEdge(2, 3, 9);
-
-	cout << "Running push-relabel" << endl;
-	network.MinCutPushRelabel(0, 3);
-	
-	for (int i = 0; i < network.cut.size(); ++i) {
-		cout << network.cut[i];
-	}
-
-	return true;
-}
+//bool test1(void)
+//{
+//	FlowGraph network(4);
+//	network.AddEdge(0, 1, 10);
+//	network.AddEdge(0, 2, 10);
+//	network.AddEdge(1, 2, 1);
+//	network.AddEdge(1, 3, 9);
+//	network.AddEdge(2, 3, 9);
+//
+//	int flow = network.MaxFlowDinic(0, 3);
+//	
+//	cout << "test1: flow: " << flow << endl;
+//
+//	return flow == 18;
+//}
+//
+//bool test2(void)
+//{
+//	FlowGraph network(4);
+//	network.AddEdge(0, 1, 10);
+//	network.AddEdge(0, 2, 10);
+//	network.AddEdge(1, 2, 1);
+//	network.AddEdge(1, 3, 9);
+//	network.AddEdge(2, 3, 9);
+//
+//	cout << "Running push-relabel" << endl;
+//	network.MinCutPushRelabel(0, 3);
+//	
+//	for (int i = 0; i < network.cut.size(); ++i) {
+//		cout << network.cut[i];
+//	}
+//
+//	return true;
+//}

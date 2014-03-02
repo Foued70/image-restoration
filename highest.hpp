@@ -29,15 +29,13 @@ private:
 	vector<int> excess;
 	vector<int> height;
 	vector<int> count;
-	/* vector<bool> is slow because of bit operations */
 	vector<char> active;
 	vector<queue<int> > hset;
 	queue<int> q;
 	int highest;
-	//bool first;
 
 public:
-	vector<bool> cut;
+	vector<char> cut;
 
 	PushRelabel(int N) :
 		N(N),
@@ -49,7 +47,6 @@ public:
 		count(N+1),
        		hset(N+1),
        		highest(0) {}
-       		//first(true) {}
 
 	int AddEdge(int from, int to, int cap) {
 		G[from].push_back(Edge(from, to, cap, G[to].size()));
@@ -73,11 +70,9 @@ public:
 			G[to][G[from][index].index].flow = -cap;
 			Enqueue(from);
 		}
+	}
 
-		//assert(excess[from] >= 0);
-		//assert(excess[to]   >= 0);
-
-		//Enqueue(to);
+	void SetValue(int i, int v) {
 	}
 
 	void ResetFlow() {
@@ -108,9 +103,18 @@ public:
 			}
 		}
 
-		if (height[u] > N) {
+		if (height[u] >= N) {
 			height[u] = N;
 			count[N]++;
+
+			int start = highest;
+			highest = -1;
+			for (int i = start; i >= 0; --i) {
+				if (hset[i].size() > 0) {
+					highest = i;
+					break;
+				}
+			}
 		}
 		else {
 			count[height[u]]++;
@@ -163,7 +167,9 @@ public:
 		}
 
 		//for (int i = h; i < N; ++i) {
-		//	hset[i] = queue<int>();
+		//	if (hset[i].size() > 0) {
+		//		hset[i] = queue<int>();
+		//	}
 		//}
 
 		highest = -1;
@@ -189,6 +195,16 @@ public:
 				Gap(height[u]);
 			else
 				Relabel(u);
+		}
+		else {
+			int start = highest;
+			highest = -1;
+			for (int i = start; i >= 0; --i) {
+				if (hset[i].size() > 0) {
+					highest = i;
+					break;
+				}
+			}
 		}
 	}
 
@@ -327,101 +343,29 @@ public:
 	}
 
 	void MinCutPushRelabel(int source, int sink) {
-		//fill(count.begin(), count.end(), 0);
-		//fill(height.begin(), height.end(), 0);
-		//fill(active.begin(), active.end(), false);
-
-		//ResetFlow();
 
 		height[source] = N;
 
-		//if (first) {
-		//	fill(height.begin(), height.end(), 1);
-		//	height[source] = N;
-		//	height[sink]   = 0;
-		//	count[1] = N - 2;
-		//	count[0] = 1;
-		//	count[N] = 1;
-		//	first = false;
-		//}
-
-
 		active[source] = active[sink] = true;
-		//for (int i = 0; i < N; ++i) {
-		//	count[height[i]]++;
-		//	//if (excess[i] > 0) Enqueue(i);
-		//}
-
-		//double avg = GlobalRelabel(source, sink);
 
 		for (int i = 0; i < G[source].size(); ++i) {
+			if (cut[G[source][i].to]) continue;
 			excess[source] = G[source][i].cap;
 			Push(G[source][i]);
 		}
 		excess[source] = 0;
 
-		//for (int i = 0; i < N; ++i) {
-		//	if (excess[i] > 0) Enqueue(i);
-		//}
-
-		//cout << "Checking excess." << endl;
-		//assert(CheckExcess());
-		//cout << "Checking capacities vs. flow." << endl;
-		//assert(CheckCapacity());
-		//cout << "Checking labels." << endl;
-		//assert(CheckLabels());
-		//cout << "Checking count." << endl;
-		//assert(CheckCount());
-		//cout << "Everything A OK." << endl;
-
-		//PrintGraph();
-
-		//int p = 1;
-		//while (!q.empty()) {
 		while (highest >= 0) {
-			//cout << "Highest active: " << highest << endl;
-			//PrintHSet();
-			//int u = q.front();
 			int u = hset[highest].front();
 			hset[highest].pop();
 
-			int start = highest;
-			highest = -1;
-			for (int i = start; i >= 0; --i) {
-				if (hset[i].size() > 0) {
-					highest = i;
-					break;
-				}
-			}
-
 			active[u] = false;
 			Discharge(u);
-			//q.pop();
-
-			//if (p % 10000000 == 0) {
-			//	cout << "RELABEL" << endl;
-			//	GlobalRelabel(source, sink);
-			//	cout << "Active nodes: " << ActiveNodes() << endl;
-			//	cout << "Outflow: " << OutFlow(source) << endl;
-			//	cout << "Inflow: " << InFlow(sink) << endl;
-			//	cout << "Total height: " << TotalHeight() << endl;
-			//}
-			//++p;
 		}
 
-		//PrintGraph();
-
-		//cout << "Active nodes: " << ActiveNodes() << endl;
-		//cout << "Outflow: " << OutFlow(source) << endl;
-		//cout << "Inflow: " << InFlow(sink) << endl;
-		//cout << "Total height: " << TotalHeight() << endl;
-
-		//fill(cut.begin(), cut.end(), false);
 		for (int i = 0; i < cut.size(); ++i) {
 			cut[i] = height[i] >= N;
 		}
-
-		//cout << "CUT FINISHED" << endl;
 	}
 
 	bool CheckExcess(void) {
