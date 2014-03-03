@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 
 	HighestLevelRule hrule = HighestLevelRule(pixels + 2);
 	FIFORule frule = FIFORule(pixels + 2);
-	FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(hrule));
+	FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(frule));
 
 	int source = pixels;
 	int sink   = pixels + 1;
