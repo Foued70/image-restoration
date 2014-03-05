@@ -16,7 +16,7 @@ private:
 	std::vector<Coord> v;
 
 public:
-	add(int x, int y, int w) {
+	void add(int x, int y, int w) {
 		v.push_back(Coord(x, y, w));
 	}
 

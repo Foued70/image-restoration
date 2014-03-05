@@ -4,6 +4,8 @@
 #include <opencv2/opencv.hpp>
 #include "graph.hpp"
 #include "selectionrule.hpp"
+#include "neighborhood.hpp"
+#include "image.hpp"
 
 using namespace std;
 using namespace cv;
@@ -11,17 +13,17 @@ using namespace cv;
 //bool test1(void);
 //bool test2(void);
 
-int f(int u, int v) {
-	return (u - v) * (u - v);
-}
-
-int Ei(int label, int pix, int u) {
-	return (f(label+1, pix) - f(label, pix)) * (1 - u);
-}
-
-int Eij(int b, int up, int uq) {
-	return b * ((1 - 2 * uq) * up + uq);
-}
+//int f(int u, int v) {
+//	return (u - v) * (u - v);
+//}
+//
+//int Ei(int label, int pix, int u) {
+//	return (f(label+1, pix) - f(label, pix)) * (1 - u);
+//}
+//
+//int Eij(int b, int up, int uq) {
+//	return b * ((1 - 2 * uq) * up + uq);
+//}
 
 /*
 0 0 -> 0 * b
@@ -64,130 +66,133 @@ int main(int argc, char *argv[])
 	//	}
 	//}
 
-	int beta = atoi(argv[2]);
-	int A = Eij(beta, 0, 0);
-	int B = Eij(beta, 0, 1);
-	int C = Eij(beta, 1, 0);
-	int D = Eij(beta, 1, 1);
+	//int beta = atoi(argv[2]);
+	//int A = Eij(beta, 0, 0);
+	//int B = Eij(beta, 0, 1);
+	//int C = Eij(beta, 1, 0);
+	//int D = Eij(beta, 1, 1);
 
-	cout << "A = " << A << endl;
-	cout << "B = " << B << endl;
-	cout << "C = " << C << endl;
-	cout << "D = " << D << endl;
+	//cout << "A = " << A << endl;
+	//cout << "B = " << B << endl;
+	//cout << "C = " << C << endl;
+	//cout << "D = " << D << endl;
 
-	HighestLevelRule hrule = HighestLevelRule(pixels + 2);
-	FIFORule frule = FIFORule(pixels + 2);
-	FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(frule));
+	HighestLevelRule hrule(pixels + 2);
+	FIFORule frule(pixels + 2);
+	Neighborhood neigh;
+	Image im(&image, &out, dynamic_cast<SelectionRule&>(frule), neigh);
+	im.restore(atoi(argv[2]));
+	//FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(frule));
 
-	int source = pixels;
-	int sink   = pixels + 1;
+	//int source = pixels;
+	//int sink   = pixels + 1;
 
-	cout << "Image is " << cols << "x" << rows << endl;
-	cout << "Which gives " << pixels << " pixels." << endl;
+	//cout << "Image is " << cols << "x" << rows << endl;
+	//cout << "Which gives " << pixels << " pixels." << endl;
 
-	vector<int> s_index(pixels);
-	vector<int> t_index(pixels);
+	//vector<int> s_index(pixels);
+	//vector<int> t_index(pixels);
 
-	for (int i = 0; i < pixels; ++i) {
-		t_index[i] = network.addEdge(i, sink, 0);
-	}
-	for (int i = 0; i < pixels; ++i) {
-		s_index[i] = network.addEdge(source, i, 0);
-	}
+	//for (int i = 0; i < pixels; ++i) {
+	//	t_index[i] = network.addEdge(i, sink, 0);
+	//}
+	//for (int i = 0; i < pixels; ++i) {
+	//	s_index[i] = network.addEdge(source, i, 0);
+	//}
 
-	for (int j = 0; j < rows; ++j) {
-		for (int i = 0; i < cols; ++i) {
-			if (i + 1 < cols)
-				network.addEdge(j*cols + i, j*cols + i + 1, B+C-A-D);
-			if (j + 1 < rows)
-				network.addEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
-			network.setValue(j*cols + i, image.at<uchar>(j, i));
-		}
-	}
+	//for (int j = 0; j < rows; ++j) {
+	//	for (int i = 0; i < cols; ++i) {
+	//		if (i + 1 < cols)
+	//			network.addEdge(j*cols + i, j*cols + i + 1, B+C-A-D);
+	//		if (j + 1 < rows)
+	//			network.addEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
+	//		network.setValue(j*cols + i, image.at<uchar>(j, i));
+	//	}
+	//}
 
-	for (int label = 255; label >= 0; --label) {
-		cout << "Label: " << label << endl;
-		vector<int> s_caps(pixels);
-		vector<int> t_caps(pixels);
+	//for (int label = 255; label >= 0; --label) {
+	//	cout << "Label: " << label << endl;
+	//	vector<int> s_caps(pixels);
+	//	vector<int> t_caps(pixels);
 
-		//cout << "Calculating source and sink edge capacities." << endl;
-		for (int j = 0; j < rows; ++j) {
-			for (int i = 0; i < cols; ++i) {
-				int e0 = Ei(label, image.at<uchar>(j, i), 0);
-				int e1 = Ei(label, image.at<uchar>(j, i), 1);
+	//	//cout << "Calculating source and sink edge capacities." << endl;
+	//	for (int j = 0; j < rows; ++j) {
+	//		for (int i = 0; i < cols; ++i) {
+	//			int e0 = Ei(label, image.at<uchar>(j, i), 0);
+	//			int e1 = Ei(label, image.at<uchar>(j, i), 1);
 
-				if (e0 < e1) {
-					s_caps[j*cols + i] += e1 - e0;
-				}
-				else {
-					t_caps[j*cols + i] += e0 - e1;
-				}
+	//			if (e0 < e1) {
+	//				s_caps[j*cols + i] += e1 - e0;
+	//			}
+	//			else {
+	//				t_caps[j*cols + i] += e0 - e1;
+	//			}
 
-				if (i + 1 < cols) {
-					//if (C - A > 0) {
-						s_caps[j*cols + i] += C - A;
-					//}
-					//else {
-					//	t_caps[j*cols + i] += A - C;
-					//}
+	//			if (i + 1 < cols) {
+	//				//if (C - A > 0) {
+	//					s_caps[j*cols + i] += C - A;
+	//				//}
+	//				//else {
+	//				//	t_caps[j*cols + i] += A - C;
+	//				//}
 
-					//if (D - C > 0) {
-					//	s_caps[j*cols + i + 1] += D - C;
-					//}
-					//else {
-						t_caps[j*cols + i + 1] += C - D;
-					//}
-				}
+	//				//if (D - C > 0) {
+	//				//	s_caps[j*cols + i + 1] += D - C;
+	//				//}
+	//				//else {
+	//					t_caps[j*cols + i + 1] += C - D;
+	//				//}
+	//			}
 
-				if (j + 1 < rows) {
-					//if (C - A > 0) {
-						s_caps[j*cols + i] += C - A;
-					//}
-					//else {
-					//	t_caps[j*cols + i] += A - C;
-					//}
+	//			if (j + 1 < rows) {
+	//				//if (C - A > 0) {
+	//					s_caps[j*cols + i] += C - A;
+	//				//}
+	//				//else {
+	//				//	t_caps[j*cols + i] += A - C;
+	//				//}
 
-					//if (D - C > 0) {
-					//	s_caps[(j+1)*cols + i] += D - C;
-					//}
-					//else {
-						t_caps[(j+1)*cols + i] += C - D;
-					//}
-				}
-			}
-		}
+	//				//if (D - C > 0) {
+	//				//	s_caps[(j+1)*cols + i] += D - C;
+	//				//}
+	//				//else {
+	//					t_caps[(j+1)*cols + i] += C - D;
+	//				//}
+	//			}
+	//		}
+	//	}
 
-		//cout << "Changing source edge capacities." << endl;
-		for (int i = 0; i < s_caps.size(); ++i) {
-			if (!network.cut[i]) {
-				network.changeCapacity(source, s_index[i], s_caps[i]);
-			}
-		}
+	//	//cout << "Changing source edge capacities." << endl;
+	//	for (int i = 0; i < s_caps.size(); ++i) {
+	//		if (!network.cut[i]) {
+	//			network.changeCapacity(source, s_index[i], s_caps[i]);
+	//		}
+	//	}
 
-		//cout << "Changing sink edge capacities." << endl;
-		for (int i = 0; i < t_caps.size(); ++i) {
-			if (!network.cut[i]) {
-				network.changeCapacity(i, t_index[i], t_caps[i]);
-			}
-		}
+	//	//cout << "Changing sink edge capacities." << endl;
+	//	for (int i = 0; i < t_caps.size(); ++i) {
+	//		if (!network.cut[i]) {
+	//			network.changeCapacity(i, t_index[i], t_caps[i]);
+	//		}
+	//	}
 
-		//network.ResetFlow();
-		//cout << "Source out capacity: " << network.OutCap(source) << endl;
-		//cout << "Sink in capacity: " << network.InCap(sink) << endl;
-		//cout << "Starting min cut algorithm" << endl;
-		//network.MinCutDinic(source, sink);
-		network.minCutPushRelabel(source, sink);
-		//cout << "Active nodes: " << network.ActiveNodes() << endl;
+	//	//network.ResetFlow();
+	//	//cout << "Source out capacity: " << network.OutCap(source) << endl;
+	//	//cout << "Sink in capacity: " << network.InCap(sink) << endl;
+	//	//cout << "Starting min cut algorithm" << endl;
+	//	//network.MinCutDinic(source, sink);
+	//	network.minCutPushRelabel(source, sink);
+	//	//cout << "Active nodes: " << network.ActiveNodes() << endl;
 
-		for (int j = 0; j < rows; ++j) {
-			for (int i = 0; i < cols; ++i) {
-				if (!network.cut[j*cols + i])
-					out.at<uchar>(j, i) = label;
-			}
-		}
-	}
+	//	for (int j = 0; j < rows; ++j) {
+	//		for (int i = 0; i < cols; ++i) {
+	//			if (!network.cut[j*cols + i])
+	//				out.at<uchar>(j, i) = label;
+	//		}
+	//	}
+	//}
 
-	cout << endl;
+	//cout << endl;
 
 	//for (int j = 0; j < rows; ++j) {
 	//	for (int i = 0; i < cols; ++i) {
