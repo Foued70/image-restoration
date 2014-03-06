@@ -3,7 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <vector>
-#include <stack>
+#include <set>
 #include "selectionrule.hpp"
 
 class Edge {
@@ -44,6 +44,8 @@ public:
 	void changeCapacity(int from, int index, int cap);
 	void setValue(int i, int v);
 	void resetFlow();
+	void resetHeights();
+	void reset(std::set<int>);
 
 	void push(Edge &e);
 	void relabel(int u);

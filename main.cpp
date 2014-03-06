@@ -81,7 +81,8 @@ int main(int argc, char *argv[])
 	FIFORule frule(pixels + 2);
 	Neighborhood neigh;
 	Image im(&image, &out, dynamic_cast<SelectionRule&>(frule), neigh);
-	im.restore(atoi(argv[2]));
+	//im.restore(atoi(argv[2]));
+	im.restoreBisect(atoi(argv[2]));
 	//FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(frule));
 
 	//int source = pixels;

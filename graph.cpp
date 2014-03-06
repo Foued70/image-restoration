@@ -1,5 +1,6 @@
 #include <iostream>
 #include <queue>
+#include <stack>
 #include <vector>
 #include <cassert>
 
@@ -27,8 +28,10 @@ void FlowGraph::changeCapacity(int from, int index, int cap) {
 		excess[to] -= diff;
 		G[from][index].flow = cap;
 		G[to][G[from][index].index].flow = -cap;
-		rule.add(from, height[from], excess[from]);
+		//rule.add(from, height[from], excess[from]);
 	}
+	rule.add(from, height[from], excess[from]);
+	rule.add(to, height[to], excess[to]);
 }
 
 void FlowGraph::setValue(int i, int v) {
@@ -39,7 +42,26 @@ void FlowGraph::resetFlow() {
 		for (int j = 0; j < G[i].size(); ++j) {
 			G[i][j].flow = 0;
 		}
-		excess[i] = 0;
+	}
+	fill(excess.begin(), excess.end(), 0);
+}
+
+void FlowGraph::resetHeights() {
+	fill(height.begin(), height.end(), 0);
+	fill(count.begin(), count.end(), 0);
+}
+
+// FIXME: General iterators using templates.
+void FlowGraph::reset(set<int> nodes) {
+	for (set<int>::const_iterator it = nodes.begin(); it != nodes.end(); ++it) {
+		for (int j = 0; j < G[*it].size(); ++j) {
+			G[*it][j].flow = 0;
+			G[G[*it][j].to][G[*it][j].index].flow = 0;
+			excess[G[*it][j].to] = 0;
+		}
+		excess[*it] = 0;
+		height[*it] = 0;
+		rule.deactivate(*it);
 	}
 }
 
@@ -157,16 +179,19 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	rule.activate(sink);
 
 	for (int i = 0; i < G[source].size(); ++i) {
-		if (cut[G[source][i].to]) continue;
+		//if (cut[G[source][i].to]) continue;
 		excess[source] = G[source][i].cap;
 		push(G[source][i]);
 	}
 	excess[source] = 0;
 
+	int c = 0;
 	while (!rule.empty()) {
+		c++;
 		int u = rule.next();
 		discharge(u);
 	}
+	cout << "Discharged: " << c << endl;
 
 	for (int i = 0; i < cut.size(); ++i) {
 		cut[i] = height[i] >= N;

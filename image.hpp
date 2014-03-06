@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 #include <opencv2/opencv.hpp>
 #include "graph.hpp"
 #include "selectionrule.hpp"
@@ -25,6 +26,7 @@ private:
 
 	void createEdges(int beta);
 	void setupSourceSink(int beta, int label);
+	void setupSourceSink(int beta, int label, std::set<int> nodes);
 
 public:
 	Image(cv::Mat *in, cv::Mat *out, SelectionRule& rule, Neighborhood& neigh) :
@@ -43,7 +45,9 @@ public:
 		t_caps(pixels),
 		sink(pixels + 1) {}
 
-	void segment(int beta, int label);
+	std::set<int> segment(int beta, int label, std::set<int>& active);
 	void restore(int beta);
+	void restoreBisect(int beta);
+	void restorePart(int beta, int lo, int hi, std::set<int>& active);
 };
 
