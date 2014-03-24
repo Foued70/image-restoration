@@ -28,10 +28,10 @@ void FlowGraph::changeCapacity(int from, int index, int cap) {
 		excess[to] -= diff;
 		G[from][index].flow = cap;
 		G[to][G[from][index].index].flow = -cap;
-		//rule.add(from, height[from], excess[from]);
+		rule.add(from, height[from], excess[from]);
 	}
-	rule.add(from, height[from], excess[from]);
-	rule.add(to, height[to], excess[to]);
+	//rule.add(from, height[from], excess[from]);
+	//rule.add(to, height[to], excess[to]);
 }
 
 void FlowGraph::setValue(int i, int v) {
@@ -51,17 +51,18 @@ void FlowGraph::resetHeights() {
 	fill(count.begin(), count.end(), 0);
 }
 
-// FIXME: General iterators using templates.
-void FlowGraph::reset(set<int> nodes) {
-	for (set<int>::const_iterator it = nodes.begin(); it != nodes.end(); ++it) {
-		for (int j = 0; j < G[*it].size(); ++j) {
-			G[*it][j].flow = 0;
-			G[G[*it][j].to][G[*it][j].index].flow = 0;
-			excess[G[*it][j].to] = 0;
+void FlowGraph::reset(vector<char> nodes) {
+	for (int i = 0; i < nodes.size(); ++i) {
+		if (nodes[i]) {
+			for (int j = 0; j < G[i].size(); ++j) {
+				G[i][j].flow = 0;
+				G[G[i][j].to][G[i][j].index].flow = 0;
+				excess[G[i][j].to] = 0;
+			}
+			excess[i] = 0;
+			height[i] = 0;
+			rule.deactivate(i);
 		}
-		excess[*it] = 0;
-		height[*it] = 0;
-		rule.deactivate(*it);
 	}
 }
 
@@ -343,6 +344,20 @@ int FlowGraph::activeNodes(void) {
 		if (excess[i] > 0) c++;
 	}
 	return c;
+}
+
+int FlowGraph::inFlow(vector<char>& nodes) {
+	int s = 0;
+	for (int i = 0; i < nodes.size(); ++i) {
+		if (nodes[i]) {
+			for (int j = 0; j < G[i].size(); ++j) {
+				if (!nodes[G[i][j].to]) {
+					s += G[G[i][j].to][G[i][j].index].flow;
+				}
+			}
+		}
+	}
+	return s;
 }
 
 int FlowGraph::outFlow(int source) {

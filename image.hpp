@@ -45,9 +45,9 @@ public:
 		t_caps(pixels),
 		sink(pixels + 1) {}
 
-	std::set<int> segment(int beta, int label, std::set<int>& active);
+	std::vector<char> segment(int beta, int label, std::vector<char>& active);
 	void restore(int beta);
 	void restoreBisect(int beta);
-	void restorePart(int beta, int lo, int hi, std::set<int>& active);
+	void restorePart(int beta, int lo, int hi, std::vector<char>& active);
 };
 

@@ -37,6 +37,7 @@ int HighestLevelRule::next(void) {
 
 void HighestLevelRule::add(int u, int height, int excess) {
 	if (isActive(u)) return;
+	if (!inSegment(u)) return;
 	if (height >= N) return;
 	if (excess == 0) return;
 
@@ -64,6 +65,7 @@ int FIFORule::next(void) {
 
 void FIFORule::add(int u, int height, int excess) {
 	if (isActive(u)) return;
+	//if (!inSegment(u)) return;
 	if (height >= N) return;
 	if (excess == 0) return;
 

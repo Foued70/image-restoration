@@ -73,49 +73,23 @@ void Image::setupSourceSink(int beta, int label) {
 			}
 
 			if (i + 1 < cols) {
-				//if (C - A > 0) {
 				s_caps[j*cols + i] += C - A;
-				//}
-				//else {
-				//	t_caps[j*cols + i] += A - C;
-				//}
-
-				//if (D - C > 0) {
-				//	s_caps[j*cols + i + 1] += D - C;
-				//}
-				//else {
 				t_caps[j*cols + i + 1] += C - D;
-				//}
 			}
 
 			if (j + 1 < rows) {
-				//if (C - A > 0) {
 				s_caps[j*cols + i] += C - A;
-				//}
-				//else {
-				//	t_caps[j*cols + i] += A - C;
-				//}
-
-				//if (D - C > 0) {
-				//	s_caps[(j+1)*cols + i] += D - C;
-				//}
-				//else {
 				t_caps[(j+1)*cols + i] += C - D;
-				//}
 			}
 		}
 	}
 
 	for (int i = 0; i < s_caps.size(); ++i) {
-		//if (!network.cut[i]) {
-			network.changeCapacity(source, s_index[i], s_caps[i]);
-		//}
+		network.changeCapacity(source, s_index[i], s_caps[i]);
 	}
 
 	for (int i = 0; i < t_caps.size(); ++i) {
-		//if (!network.cut[i]) {
-			network.changeCapacity(i, t_index[i], t_caps[i]);
-		//}
+		network.changeCapacity(i, t_index[i], t_caps[i]);
 	}
 }
 
@@ -176,39 +150,36 @@ void Image::restore(int beta) {
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
 
-	network.resetFlow();
-	network.resetHeights();
+		//vector<char> lower = segment(beta, label, all);
+		setupSourceSink(beta, label);
+		network.minCutPushRelabel(source, sink);
 
-		set<int> lower = segment(beta, label, all);
-		//setupSourceSink(beta, label);
-		//network.minCutPushRelabel(source, sink);
-
-		cout << "lower.size() = " << lower.size() << endl;
-		for (set<int>::const_iterator it = lower.begin();
-				it != lower.end();
-				++it) {
-			out->at<uchar>(*it / cols, *it % cols) = label;
-		}
-		//for (int j = 0; j < rows; ++j) {
-		//	for (int i = 0; i < cols; ++i) {
-		//		if (!network.cut[j*cols + i])
-		//			out->at<uchar>(j, i) = label;
-		//	}
+		//cout << "lower.size() = " << lower.size() << endl;
+		//for (set<int>::const_iterator it = lower.begin();
+		//		it != lower.end();
+		//		++it) {
+		//	out->at<uchar>(*it / cols, *it % cols) = label;
 		//}
+		for (int j = 0; j < rows; ++j) {
+			for (int i = 0; i < cols; ++i) {
+				if (!network.cut[j*cols + i])
+					out->at<uchar>(j, i) = label;
+			}
+		}
 	}
 }
 
-set<int> Image::segment(int beta, int label, set<int>& active) {
+vector<char> Image::segment(int beta, int label, vector<char>& active) {
 	//setupSourceSink(beta, label, active);
+	// SLOW
 	setupSourceSink(beta, label);
+	// SLOW Should make use of active
 	network.minCutPushRelabel(source, sink);
 
-	set<int> lower;
-	for (set<int>::const_iterator it = active.begin();
-			it != active.end();
-			++it) {
-		if (!network.cut[*it]) {
-			lower.insert(*it);
+	vector<char> lower(pixels);
+	for (int i = 0; i < active.size(); ++i) {
+		if (!network.cut[i] && active[i]) {
+			lower[i] = 1;
 		}
 	}
 
@@ -218,14 +189,13 @@ set<int> Image::segment(int beta, int label, set<int>& active) {
 void Image::restoreBisect(int beta) {
 	createEdges(beta);
 
-	set<int> all;
-	for (int i = 0; i < pixels; ++i) {
-		all.insert(i);
-	}
+	vector<char> all(pixels);
+	fill(all.begin(), all.end(), 1);
+
 	restorePart(beta, -1, 255, all);
 }
 
-void Image::restorePart(int beta, int lo, int hi, set<int>& active) {
+void Image::restorePart(int beta, int lo, int hi, vector<char>& active) {
 	cout << "Restoring between " << lo << " and " << hi << endl;
 	/*
 	 * Kjører segmentering et sted mellom lo og hi. Alle piksler som
@@ -241,17 +211,13 @@ void Image::restorePart(int beta, int lo, int hi, set<int>& active) {
 	 * Alle andre: har label <= current
 	 *
 	 */
-	if (lo >= hi) {
-		assert(0);
-	}
 
 	if (lo + 1 == hi) {
 		cout << "Found label: " << hi << endl;
-		cout << "active.size() = " << active.size() << endl;
-		for (set<int>::const_iterator it = active.begin();
-				it != active.end();
-				++it) {
-					out->at<uchar>(*it / cols, *it % cols) = hi;
+		for (int i = 0; i < active.size(); ++i) {
+			if (active[i]) {
+				out->at<uchar>(i / cols, i % cols) = hi;
+			}
 		}
 		return;
 	}
@@ -277,27 +243,29 @@ void Image::restorePart(int beta, int lo, int hi, set<int>& active) {
 	int mid = lo + (hi - lo) / 2;
 	cout << lo << " ----(" << mid << ")---- " << hi << endl;
 
-	set<int> lower = segment(beta, mid, active);
-	set<int> higher;
+	network.setSegment(&active);
+	vector<char> lower = segment(beta, mid, active);
+	vector<char> higher(pixels);
 
-	set_difference(
-			active.begin(), active.end(),
-			lower.begin(), lower.end(),
-			inserter(higher, higher.end())
-		      );
+	// SLOW
+	int l = 0;
+	int h = 0;
+	for (int i = 0; i < active.size(); ++i) {
+		if (active[i] && !lower[i]) {
+			higher[i] = 1;
+			h++;
+		}
+		if (active[i] && lower[i]) l++;
+	}
 
-	cout << "\tStarted out with " << active.size() << endl;
-	cout << "\tBelow " << lower.size() << endl;
-	cout << "\tAbove " << higher.size() << endl;
+	cout << "Flow into active: " << network.inFlow(active) << endl;
 
 	/*
 	 * For these guys we know that the label will be lower, and that
 	 * the ChangeCapacity approach will work
 	 */
-	network.resetFlow();
-	network.resetHeights();
 
-	if (mid >= lo + 1 && lower.size() > 0)
+	if (mid >= lo + 1 && l > 0)
 		restorePart(beta, lo, mid, lower);
 
 	/*
@@ -308,9 +276,11 @@ void Image::restorePart(int beta, int lo, int hi, set<int>& active) {
 	 * have therefore already been treated. This will also reset the
 	 * height of the nodes, and their activeness!
 	 */
+	// SLOW
 	network.resetFlow();
 	network.resetHeights();
 
-	if (hi >= mid + 1 && higher.size() > 0)
+	if (hi >= mid + 1 && h > 0)
 		restorePart(beta, mid, hi, higher);
 }
+

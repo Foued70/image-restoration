@@ -16,6 +16,7 @@ class SelectionRule {
 
 private:
 	std::vector<char> active;
+	std::vector<char> *segment;
 
 protected:
 	int N;
@@ -29,6 +30,8 @@ public:
 	void activate(int u) { active[u] = 1; }
 	void deactivate(int u) { active[u] = 0; }
 	bool isActive(int u) { return active[u]; }
+	void setSegment(std::vector<char> *s) { segment = s; }
+	bool inSegment(int u) { return (*segment)[u]; }
 
 	SelectionRule(int N) : N(N), active(N) {}
 

@@ -45,7 +45,8 @@ public:
 	void setValue(int i, int v);
 	void resetFlow();
 	void resetHeights();
-	void reset(std::set<int>);
+	void reset(std::vector<char>);
+	void setSegment(std::vector<char> *s) { rule.setSegment(s); }
 
 	void push(Edge &e);
 	void relabel(int u);
@@ -66,6 +67,7 @@ public:
 	int activeNodes(void);
 	int outFlow(int source);
 	int inFlow(int sink);
+	int inFlow(std::vector<char>& nodes);
 	int outCap(int source);
 	int inCap(int sink);
 	int totalHeight(void);
