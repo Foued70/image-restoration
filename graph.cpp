@@ -17,6 +17,11 @@ int FlowGraph::addEdge(int from, int to, int cap) {
 	return index;
 }
 
+void FlowGraph::addDoubleEdge(int from, int to, int cap) {
+	G[from].push_back(Edge(from, to, cap, G[to].size()));
+	G[to].push_back(Edge(to, from, cap, G[from].size() - 1));
+}
+
 void FlowGraph::changeCapacity(int from, int index, int cap) {
 	int to = G[from][index].to;
 	int diff = G[from][index].flow - cap;

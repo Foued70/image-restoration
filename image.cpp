@@ -34,12 +34,21 @@ void Image::createEdges(int beta) {
 	cout << "Image is " << cols << "x" << rows << endl;
 	cout << "Which gives " << pixels << " pixels." << endl;
 
+	//for (int j = 0; j < rows; ++j) {
+	//	for (int i = 0; i < cols; ++i) {
+	//		if (i + 1 < cols)
+	//			network.addEdge(j*cols + i, j*cols + i + 1, B+C-A-D);
+	//		if (j + 1 < rows)
+	//			network.addEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
+	//	}
+	//}
+
 	for (int j = 0; j < rows; ++j) {
 		for (int i = 0; i < cols; ++i) {
 			if (i + 1 < cols)
-				network.addEdge(j*cols + i, j*cols + i + 1, B+C-A-D);
+				network.addDoubleEdge(j*cols + i, j*cols + i + 1, B);
 			if (j + 1 < rows)
-				network.addEdge(j*cols + i, (j+1)*cols + i, B+C-A-D);
+				network.addDoubleEdge(j*cols + i, (j+1)*cols + i, B);
 		}
 	}
 
@@ -52,10 +61,10 @@ void Image::createEdges(int beta) {
 }
 
 void Image::setupSourceSink(int beta, int label) {
-	int A = Eij(beta, 0, 0);
-	int B = Eij(beta, 0, 1);
-	int C = Eij(beta, 1, 0);
-	int D = Eij(beta, 1, 1);
+	//int A = Eij(beta, 0, 0);
+	//int B = Eij(beta, 0, 1);
+	//int C = Eij(beta, 1, 0);
+	//int D = Eij(beta, 1, 1);
 
 	fill(s_caps.begin(), s_caps.end(), 0);
 	fill(t_caps.begin(), t_caps.end(), 0);
@@ -72,15 +81,15 @@ void Image::setupSourceSink(int beta, int label) {
 				t_caps[j*cols + i] += e0 - e1;
 			}
 
-			if (i + 1 < cols) {
-				s_caps[j*cols + i] += C - A;
-				t_caps[j*cols + i + 1] += C - D;
-			}
+			//if (i + 1 < cols) {
+			//	s_caps[j*cols + i] += C - A;
+			//	t_caps[j*cols + i + 1] += C - D;
+			//}
 
-			if (j + 1 < rows) {
-				s_caps[j*cols + i] += C - A;
-				t_caps[(j+1)*cols + i] += C - D;
-			}
+			//if (j + 1 < rows) {
+			//	s_caps[j*cols + i] += C - A;
+			//	t_caps[(j+1)*cols + i] += C - D;
+			//}
 		}
 	}
 
@@ -99,6 +108,7 @@ void Image::setupSourceSink(int beta, int label, set<int> nodes) {
 	int C = Eij(beta, 1, 0);
 	int D = Eij(beta, 1, 1);
 
+	assert(0);
 	fill(s_caps.begin(), s_caps.end(), 0);
 	fill(t_caps.begin(), t_caps.end(), 0);
 

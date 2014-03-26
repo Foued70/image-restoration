@@ -41,6 +41,7 @@ public:
        		rule(rule) {}
 
 	int addEdge(int from, int to, int cap);
+	void addDoubleEdge(int from, int to, int cap);
 	void changeCapacity(int from, int index, int cap);
 	void setValue(int i, int v);
 	void resetFlow();
