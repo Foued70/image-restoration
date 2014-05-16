@@ -25,7 +25,7 @@ private:
 	SelectionRule& rule;
 
 	void createEdges(int beta);
-	void setupSourceSink(int beta, int label);
+	void setupSourceSink(int beta, int label, int p);
 	void setupSourceSink(int beta, int label, std::set<int> nodes);
 
 public:
@@ -46,7 +46,7 @@ public:
 		sink(pixels + 1) {}
 
 	std::vector<char> segment(int beta, int label, std::vector<char>& active);
-	void restore(int beta);
+	void restore(int beta, int p);
 	void restoreBisect(int beta);
 	void restorePart(int beta, int lo, int hi, std::vector<char>& active);
 };
