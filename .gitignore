@@ -39,6 +39,7 @@ nosetests.xml
 image-restoration
 avg
 imgdiff
+methodnoise
 
 # CMake
 CMakeCache.txt
@@ -51,5 +52,9 @@ cmake_install.cmake
 callgrind.out.*
 
 # Output
-out.bmp
+*.bmp
+*.png
+
+# VIM
+*.swp
 

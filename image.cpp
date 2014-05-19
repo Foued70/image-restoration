@@ -9,7 +9,7 @@ using namespace std;
 using namespace cv;
 
 int f(int u, int v, int p) {
-	return (u - v) * (p == 2 ? (u - v) : 1);
+	return p == 2 ? (u - v) * (u - v) : abs(u - v);
 }
 
 int Ei(int label, int pix, int u, int p) {
@@ -20,7 +20,7 @@ int Eij(int b, int up, int uq) {
 	return b * ((1 - 2 * uq) * up + uq);
 }
 
-void Image::createEdges(int beta) {
+void Image::createEdges(int alpha, int beta) {
 	int A = Eij(beta, 0, 0);
 	int B = Eij(beta, 0, 1);
 	int C = Eij(beta, 1, 0);
@@ -43,6 +43,14 @@ void Image::createEdges(int beta) {
 	//	}
 	//}
 
+	/*
+	 * Add sink edges first, so that the first push in discharge
+	 * will go towards the sink.
+	 */
+	for (int i = 0; i < pixels; ++i) {
+		t_index[i] = network.addEdge(i, sink, 0);
+	}
+
 	for (int j = 0; j < rows; ++j) {
 		for (int i = 0; i < cols; ++i) {
 			if (i + 1 < cols)
@@ -53,14 +61,11 @@ void Image::createEdges(int beta) {
 	}
 
 	for (int i = 0; i < pixels; ++i) {
-		t_index[i] = network.addEdge(i, sink, 0);
-	}
-	for (int i = 0; i < pixels; ++i) {
 		s_index[i] = network.addEdge(source, i, 0);
 	}
 }
 
-void Image::setupSourceSink(int beta, int label, int p) {
+void Image::setupSourceSink(int alpha, int beta, int label, int p) {
 
 	fill(s_caps.begin(), s_caps.end(), 0);
 	fill(t_caps.begin(), t_caps.end(), 0);
@@ -76,25 +81,15 @@ void Image::setupSourceSink(int beta, int label, int p) {
 			else {
 				t_caps[j*cols + i] += e0 - e1;
 			}
-
-			//if (i + 1 < cols) {
-			//	s_caps[j*cols + i] += C - A;
-			//	t_caps[j*cols + i + 1] += C - D;
-			//}
-
-			//if (j + 1 < rows) {
-			//	s_caps[j*cols + i] += C - A;
-			//	t_caps[(j+1)*cols + i] += C - D;
-			//}
 		}
 	}
 
 	for (int i = 0; i < s_caps.size(); ++i) {
-		network.changeCapacity(source, s_index[i], s_caps[i]);
+		network.changeCapacity(source, s_index[i], alpha * s_caps[i]);
 	}
 
 	for (int i = 0; i < t_caps.size(); ++i) {
-		network.changeCapacity(i, t_index[i], t_caps[i]);
+		network.changeCapacity(i, t_index[i], alpha * t_caps[i]);
 	}
 }
 
@@ -146,13 +141,15 @@ void Image::setupSourceSink(int beta, int label, int p) {
 //	}
 //}
 
-void Image::restore(int beta, int p) {
-	createEdges(beta);
+void Image::restore(int alpha, int beta, int p) {
+
+	cout << "alpha = " << alpha << ", beta = " << beta << endl;
+	createEdges(alpha, beta);
 
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
 
-		setupSourceSink(beta, label, p);
+		setupSourceSink(alpha, beta, label, p);
 		network.minCutPushRelabel(source, sink);
 
 		for (int j = 0; j < rows; ++j) {

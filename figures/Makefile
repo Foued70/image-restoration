@@ -5,11 +5,15 @@ mid   = 127
 mult  = 1
 
 NOISES  = normal laplace
-PARAMS  = 10 30 50
-FILES  += $(patsubst %, method_%.png, $(PARAMS))
-FILES  += $(patsubst %, restored_%.png, $(PARAMS))
-TARGETS+= $(patsubst %, normal/%, $(FILES))
-TARGETS+= $(patsubst %, laplace/%, $(FILES))
+NPARAMS = 10 30 50
+LPARAMS = 0.3 0.7 1
+NFILES  += $(patsubst %, method_%.png, $(NPARAMS))
+NFILES  += $(patsubst %, restored_%.png, $(NPARAMS))
+LFILES  += $(patsubst %, method_%.png, $(LPARAMS))
+LFILES  += $(patsubst %, restored_%.png, $(LPARAMS))
+FILES   += noisy.png
+TARGETS += $(patsubst %, normal/%, $(NFILES))
+TARGETS += $(patsubst %, laplace/%, $(LFILES))
 
 
 .SECONDARY:
@@ -18,13 +22,18 @@ TARGETS+= $(patsubst %, laplace/%, $(FILES))
 	python ../noise.py -t $(@D) -m $(mean) -s $(std) $< $@
 
 restored_%.bmp: noisy.bmp
-	../image-restoration $(*D)/$< $(*F) $@ > /dev/null
+
+	if   [ $(*D) = "laplace" ]; then \
+		../image-restoration -b $(*F) -p 1 $(*D)/$< $@ > /dev/null; \
+	else \
+		../image-restoration -b $(*F) -p 2 $(*D)/$< $@ > /dev/null; \
+	fi
 
 method_%.bmp: noisy.bmp restored_%.bmp
 	../methodnoise $(*D)/$(word 1, $^) $(word 2, $^) $@ $(mid) $(mult)
 
 %.png: %.bmp
-	convert $< $@
+	convert -colorspace gray -gamma 2.2 $< $@
 	mogrify -density 90 $@
 
 all: $(TARGETS)
@@ -32,4 +41,5 @@ all: $(TARGETS)
 .PHONY: clean
 
 clean:
-	rm -f $(normals) *.png
+	rm -f $(TARGETS) *.png 
+

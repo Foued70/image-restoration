@@ -24,9 +24,9 @@ private:
 	Neighborhood& neigh;
 	SelectionRule& rule;
 
-	void createEdges(int beta);
-	void setupSourceSink(int beta, int label, int p);
-	void setupSourceSink(int beta, int label, std::set<int> nodes);
+	void createEdges(int alpha, int beta);
+	void setupSourceSink(int alpha, int beta, int label, int p);
+	//void setupSourceSink(int alpha, int beta, int label, std::set<int> nodes);
 
 public:
 	Image(cv::Mat *in, cv::Mat *out, SelectionRule& rule, Neighborhood& neigh) :
@@ -46,7 +46,7 @@ public:
 		sink(pixels + 1) {}
 
 	std::vector<char> segment(int beta, int label, std::vector<char>& active);
-	void restore(int beta, int p);
+	void restore(int alpha, int beta, int p);
 	void restoreBisect(int beta);
 	void restorePart(int beta, int lo, int hi, std::vector<char>& active);
 };

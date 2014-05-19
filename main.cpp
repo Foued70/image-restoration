@@ -85,13 +85,23 @@ int main(int argc, char *argv[])
 	int in_sum = 0;
 	int out_sum = 0;
 
+	int alpha;
+	int b;
+
+	alpha = 1;
+	b = beta;
+	if (beta < 5) {
+		b = 100 * beta;
+		alpha = 100;
+	}
+
 	Mat out = image.clone();
 
 	HighestLevelRule hrule(pixels + 2);
 	FIFORule frule(pixels + 2);
 	Neighborhood neigh;
 	Image im(&image, &out, dynamic_cast<SelectionRule&>(frule), neigh);
-	im.restore(beta, p);
+	im.restore(alpha, b, p);
 
 	//im.restoreBisect(atoi(argv[2]));
 	//FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(frule));
