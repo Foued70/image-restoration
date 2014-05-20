@@ -21,12 +21,13 @@ private:
 	std::vector<int> t_caps;
 
 	FlowGraph network;
+
+	/* These would preferrably be pointers, not references */
 	Neighborhood& neigh;
 	SelectionRule& rule;
 
-	void createEdges(int alpha, int beta);
-	void setupSourceSink(int alpha, int beta, int label, int p);
-	//void setupSourceSink(int alpha, int beta, int label, std::set<int> nodes);
+	void createEdges();
+	void setupSourceSink(int alpha, int label, int p);
 
 public:
 	Image(cv::Mat *in, cv::Mat *out, SelectionRule& rule, Neighborhood& neigh) :
@@ -45,9 +46,6 @@ public:
 		t_caps(pixels),
 		sink(pixels + 1) {}
 
-	std::vector<char> segment(int beta, int label, std::vector<char>& active);
-	void restore(int alpha, int beta, int p);
-	void restoreBisect(int beta);
-	void restorePart(int beta, int lo, int hi, std::vector<char>& active);
+	void restore(int alpha, int p);
 };
 

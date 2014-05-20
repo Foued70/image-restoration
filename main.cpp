@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
 	int index;
 	int c;
 
+	/* Read command line parameters beta and p. */
 	while ((c = getopt (argc, argv, "b:p:")) != -1) {
 		switch (c)
 		{
@@ -68,9 +69,10 @@ int main(int argc, char *argv[])
 	cout << "Using p = " << p << endl;
 	cout << "Using beta = " << beta << endl;
 
-	for (index = optind; index < argc; index++)
-		printf ("Non-option argument %s\n", argv[index]);
-
+	/*
+	 * Non-option arguments are now in argv from index optind
+	 * to index argc-1
+	 */
 	Mat image;
 	image = imread(argv[optind], CV_LOAD_IMAGE_GRAYSCALE);
 
@@ -82,36 +84,39 @@ int main(int argc, char *argv[])
 	int rows = image.rows;
 	int cols = image.cols;
 	int pixels = rows * cols;
-	int in_sum = 0;
-	int out_sum = 0;
 
-	int alpha;
+	/*
+	 * Network only handles integer edges, so for floating
+	 * point beta parameters, we cheat a little bit.
+	 */
+	int a;
 	int b;
-
-	alpha = 1;
+	a = 1;
 	b = beta;
-	if (beta < 5) {
+	if (beta < 10) {
 		b = 100 * beta;
-		alpha = 100;
+		a = 100;
 	}
+
+	/*
+	 * Specify one quarter of the neighbors of a pixel. The rest
+	 * are added symmetrically around.
+	 */
+	Neighborhood neigh;
+	neigh.add( 1, 0, b * 1.0);
+	neigh.add( 0, 1, b * 1.0);
+	//neigh.add( 1, 1, b * 1.0/sqrt(2.0));
+	//neigh.add(-1, 1, b * 1.0/sqrt(2.0));
 
 	Mat out = image.clone();
 
 	HighestLevelRule hrule(pixels + 2);
 	FIFORule frule(pixels + 2);
-	Neighborhood neigh;
+
 	Image im(&image, &out, dynamic_cast<SelectionRule&>(frule), neigh);
-	im.restore(alpha, b, p);
+	im.restore(a, p);
 
-	//im.restoreBisect(atoi(argv[2]));
-	//FlowGraph network(pixels + 2, dynamic_cast<SelectionRule&>(frule));
-
-	imwrite(argv[optind+1], out);
-
-	//cout << "Input image pixel average: ";
-	//cout << static_cast<double>(in_sum) / pixels << endl;
-	//cout << "Output image pixel average: ";
-	//cout << static_cast<double>(out_sum) / pixels << endl;
+	imwrite(argv[optind + 1], out);
 
 	return 0;
 }
