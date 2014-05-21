@@ -2,7 +2,7 @@ mean  = 0
 std   = 30
 decay = 30
 mid   = 127
-mult  = 1
+mult  = 10
 
 NOISES  = normal laplace
 NPARAMS = 10 30 50

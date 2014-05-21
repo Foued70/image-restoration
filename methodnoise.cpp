@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
 
 	int maxi = 0;
 	int mini = 255;
+	bool range = false;
 
 	for (int j = 0; j < image1.rows; ++j) {
 		for (int i = 0; i < image1.cols; ++i) {
@@ -36,16 +37,23 @@ int main(int argc, char *argv[])
 
 			int o = center + round(double(p1 - p2) * scale);
 
-			if (o < 0 || o > 255) {
-				cout << "Wrong range!" << endl;
-			}
-
 			if (o > maxi) maxi = o;
 			if (o < mini) mini = o;
+
+			if (o < 0) {
+				range = true;
+				o = 0;
+			}
+			if (o > 255) {
+				range = true;
+				o = 255;
+			}
 
 			out.at<uchar>(j, i) = o;
 		}
 	}
+
+	if (range) cout << "Wrong range!" << endl;
 
 	cout << "Minimum: " << mini << endl;
 	cout << "Maximum: " << maxi << endl;

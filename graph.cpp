@@ -35,11 +35,6 @@ void FlowGraph::changeCapacity(int from, int index, int cap) {
 		G[to][G[from][index].index].flow = -cap;
 		rule.add(from, height[from], excess[from]);
 	}
-	//rule.add(from, height[from], excess[from]);
-	//rule.add(to, height[to], excess[to]);
-}
-
-void FlowGraph::setValue(int i, int v) {
 }
 
 void FlowGraph::resetFlow() {
@@ -56,6 +51,7 @@ void FlowGraph::resetHeights() {
 	fill(count.begin(), count.end(), 0);
 }
 
+// FIXME: Rewrite this and fix Diniz
 void FlowGraph::reset(vector<char> nodes) {
 	for (int i = 0; i < nodes.size(); ++i) {
 		if (nodes[i]) {
@@ -351,20 +347,6 @@ int FlowGraph::activeNodes(void) {
 	return c;
 }
 
-int FlowGraph::inFlow(vector<char>& nodes) {
-	int s = 0;
-	for (int i = 0; i < nodes.size(); ++i) {
-		if (nodes[i]) {
-			for (int j = 0; j < G[i].size(); ++j) {
-				if (!nodes[G[i][j].to]) {
-					s += G[G[i][j].to][G[i][j].index].flow;
-				}
-			}
-		}
-	}
-	return s;
-}
-
 int FlowGraph::outFlow(int source) {
 	int c = 0;
 	for (int i = 0; i < G[source].size(); ++i) {
@@ -395,32 +377,5 @@ int FlowGraph::inCap(int sink) {
 		c += G[G[sink][i].to][G[sink][i].index].cap;
 	}
 	return c;
-}
-
-int FlowGraph::totalHeight(void) {
-	int c = 0;
-	for (int i = 0; i < height.size(); ++i) {
-		c += height[i];
-	}
-	return c;
-}
-
-void FlowGraph::printGraph(void) {
-	for (int i = 0; i < G.size(); ++i) {
-		cout << i << ": ";
-		for (int j = 0; j < G[i].size(); ++j) {
-			cout << G[i][j].to << "(" << G[i][j].cap;
-			cout << ", " << G[i][j].flow;
-			cout << "), ";
-		}
-		cout << endl;
-	}
-}
-
-void FlowGraph::printHeights(void) {
-	for (int i = 0; i < height.size(); ++i) {
-		cout << height[i] << " ";
-	}
-	cout << endl;
 }
 
