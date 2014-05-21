@@ -53,6 +53,7 @@ callgrind.out.*
 
 # Output
 *.bmp
+*.pgm
 *.png
 
 # VIM
