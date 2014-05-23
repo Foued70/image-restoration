@@ -12,28 +12,6 @@
 using namespace std;
 using namespace cv;
 
-//bool test1(void);
-//bool test2(void);
-
-//int f(int u, int v) {
-//	return (u - v) * (u - v);
-//}
-//
-//int Ei(int label, int pix, int u) {
-//	return (f(label+1, pix) - f(label, pix)) * (1 - u);
-//}
-//
-//int Eij(int b, int up, int uq) {
-//	return b * ((1 - 2 * uq) * up + uq);
-//}
-
-/*
-0 0 -> 0 * b
-0 1 -> 1 * b
-1 0 -> 1 * b
-1 1 -> 0 * b
-*/
-
 int main(int argc, char *argv[])
 {
 	int p = 2;
