@@ -43,17 +43,13 @@ public:
 	int addEdge(int from, int to, int cap);
 	void addDoubleEdge(int from, int to, int cap);
 	void changeCapacity(int from, int index, int cap);
-	void setValue(int i, int v);
 	void resetFlow();
 	void resetHeights();
-	void reset(std::vector<char>);
-	void setSegment(std::vector<char> *s) { rule.setSegment(s); }
 
 	void push(Edge &e);
 	void relabel(int u);
 	void gap(int h);
 	void discharge(int u);
-	double globalRelabel(int source, int sink);
 	void minCutPushRelabel(int source, int sink);
 
 	void minCutDinic(int source, int sink);
@@ -62,13 +58,9 @@ public:
 			int source, int sink, int limit);
 	void DFS(int source, int sink);
 
-	void printGraph(void);
-	void printHeights(void);
-
 	int activeNodes(void);
 	int outFlow(int source);
 	int inFlow(int sink);
-	int inFlow(std::vector<char>& nodes);
 	int outCap(int source);
 	int inCap(int sink);
 	int totalHeight(void);

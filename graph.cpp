@@ -129,51 +129,6 @@ void FlowGraph::discharge(int u) {
 	}
 }
 
-double FlowGraph::globalRelabel(int source, int sink) {
-	queue<int> nq;
-	queue<int> hq;
-	vector<char> visited(N);
-	nq.push(sink);
-	hq.push(0);
-
-	int c = 0;
-	int s = 0;
-	visited[sink] = true;
-	visited[source] = true;
-	while (!nq.empty()) {
-		int v = nq.front();
-		int h = hq.front();
-		nq.pop();
-		hq.pop();
-		h++;
-		for (int i = 0; i < G[v].size(); ++i) {
-			int to    = v;
-			int from  = G[v][i].to;
-			int index = G[v][i].index;
-
-			if (visited[from]) continue;
-			if (rule.isActive(from)) continue;
-			if (height[from] > h) continue;
-
-			if (G[from][index].cap > G[from][index].flow) {
-				count[height[from]]--;
-				height[from] = h;
-				count[h]++;
-				c++;
-				s += h;
-				visited[from] = true;
-				rule.add(from, height[from], excess[from]);
-				nq.push(from);
-				hq.push(h);
-			}
-		}
-	}
-	cout << "Relabeled: " << c << endl;
-	cout << "Avg: " << static_cast<double>(s) / c << endl;
-
-	return static_cast<double>(s) / c;
-}
-
 void FlowGraph::minCutPushRelabel(int source, int sink) {
 	height[source] = N;
 
@@ -181,7 +136,6 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	rule.activate(sink);
 
 	for (int i = 0; i < G[source].size(); ++i) {
-		//if (cut[G[source][i].to]) continue;
 		excess[source] = G[source][i].cap;
 		push(G[source][i]);
 	}
