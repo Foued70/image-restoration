@@ -51,22 +51,6 @@ void FlowGraph::resetHeights() {
 	fill(count.begin(), count.end(), 0);
 }
 
-// FIXME: Rewrite this and fix Diniz
-void FlowGraph::reset(vector<char> nodes) {
-	for (int i = 0; i < nodes.size(); ++i) {
-		if (nodes[i]) {
-			for (int j = 0; j < G[i].size(); ++j) {
-				G[i][j].flow = 0;
-				G[G[i][j].to][G[i][j].index].flow = 0;
-				excess[G[i][j].to] = 0;
-			}
-			excess[i] = 0;
-			height[i] = 0;
-			rule.deactivate(i);
-		}
-	}
-}
-
 void FlowGraph::push(Edge &e) {
 	int flow = min(e.cap - e.flow, excess[e.from]);
 	excess[e.from] -= flow;
@@ -177,6 +161,7 @@ void FlowGraph::DFS(int source, int sink) {
 }
 
 void FlowGraph::minCutDinic(int source, int sink) {
+	/* FIXME: RESET FLOW FIRST */
 	maxFlowDinic(source, sink);
 
 	fill(cut.begin(), cut.end(), false);
