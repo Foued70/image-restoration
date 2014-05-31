@@ -33,7 +33,9 @@ void FlowGraph::changeCapacity(int from, int index, int cap) {
 		excess[to] -= diff;
 		G[from][index].flow = cap;
 		G[to][G[from][index].index].flow = -cap;
+#ifndef DINIC
 		rule.add(from, height[from], excess[from]);
+#endif
 	}
 }
 
@@ -86,7 +88,6 @@ void FlowGraph::gap(int h) {
 		if (height[i] < h) continue;
 		if (height[i] >= N) continue;
 
-		/* FIXME: Who should be responsible for doing this? */
 		rule.deactivate(i);
 
 		count[height[i]]--;
@@ -131,7 +132,6 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 		int u = rule.next();
 		discharge(u);
 	}
-	cout << "Discharged: " << c << endl;
 
 	for (int i = 0; i < cut.size(); ++i) {
 		cut[i] = height[i] >= N;
@@ -161,7 +161,6 @@ void FlowGraph::DFS(int source, int sink) {
 }
 
 void FlowGraph::minCutDinic(int source, int sink) {
-	/* FIXME: RESET FLOW FIRST */
 	maxFlowDinic(source, sink);
 
 	fill(cut.begin(), cut.end(), false);
@@ -176,7 +175,9 @@ int FlowGraph::blockingFlow(vector<int> &level, int u,
 
 	int throughput = 0;
 	for (int i = 0; i < G[u].size(); ++i) {
+
 		int res = G[u][i].cap - G[u][i].flow;
+
 		if (level[G[u][i].to] == level[u] + 1 && res > 0) {
 			int aug = blockingFlow(
 					level,
@@ -200,8 +201,11 @@ int FlowGraph::blockingFlow(vector<int> &level, int u,
 }
 
 int FlowGraph::maxFlowDinic(int source, int sink) {
+
+	vector<int> level(N);
+
 	while (true) {
-		vector<int> level(N);
+		fill(level.begin(), level.end(), 0);
 
 		queue<int> nq;
 

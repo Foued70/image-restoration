@@ -96,10 +96,15 @@ void Image::restore(int alpha, int p) {
 	createEdges();
 
 	for (int label = 255; label >= 0; --label) {
-		cout << "Label: " << label << endl;
+		//cout << "Label: " << label << endl;
 
 		setupSourceSink(alpha, label, p);
+#ifdef DINIC
+		network.resetFlow();
+		network.minCutDinic(source, sink);
+#else
 		network.minCutPushRelabel(source, sink);
+#endif
 
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {

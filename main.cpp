@@ -16,11 +16,13 @@ int main(int argc, char *argv[])
 {
 	int p = 2;
 	double beta = 10;
+	char rarg = 'f';
+	int neighbors = 4;
 	int index;
 	int c;
 
 	/* Read command line parameters beta and p. */
-	while ((c = getopt (argc, argv, "b:p:")) != -1) {
+	while ((c = getopt(argc, argv, "b:p:n:fh")) != -1) {
 		switch (c)
 		{
 		case 'p':
@@ -29,10 +31,21 @@ int main(int argc, char *argv[])
 		case 'b':
 			beta = atof(optarg);
 			break;
+		case 'f':
+			rarg = 'f';
+			break;
+		case 'h':
+			rarg = 'h';
+			break;
+		case 'n':
+			neighbors = atoi(optarg);
+			break;
 		case '?':
 			if (optopt == 'p')
 				fprintf (stderr, "Option -%c requires an argument.\n", optopt);
 			if (optopt == 'b')
+				fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+			if (optopt == 'n')
 				fprintf (stderr, "Option -%c requires an argument.\n", optopt);
 			else if (isprint (optopt))
 				fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -46,6 +59,11 @@ int main(int argc, char *argv[])
 
 	cout << "Using p = " << p << endl;
 	cout << "Using beta = " << beta << endl;
+
+	if (neighbors != 4 && neighbors != 8) {
+		cout << "Only 4 or 8 neighbors supported, using 4." << endl;
+		neighbors = 4;
+	}
 
 	/*
 	 * Non-option arguments are now in argv from index optind
@@ -63,6 +81,12 @@ int main(int argc, char *argv[])
 	int cols = image.cols;
 	int pixels = rows * cols;
 
+#ifdef DINIC
+	cout << "Using Dinic's maximum flow algorithm." << endl;
+#else
+	cout << "Using the Push-Relabel maximum flow algorithm." << endl;
+#endif
+
 	/*
 	 * Network only handles integer edges, so for floating
 	 * point beta parameters, we cheat a little bit.
@@ -78,20 +102,33 @@ int main(int argc, char *argv[])
 
 	/*
 	 * Specify one quarter of the neighbors of a pixel. The rest
-	 * are added symmetrically around.
+	 * are added symmetrically on the other sides.
 	 */
 	Neighborhood neigh;
-	neigh.add( 1, 0, b * 1.0);
-	neigh.add( 0, 1, b * 1.0);
-	//neigh.add( 1, 1, b * 1.0/sqrt(2.0));
-	//neigh.add(-1, 1, b * 1.0/sqrt(2.0));
+	if (neighbors >= 2) {
+		neigh.add( 1, 0, b * 1.0);
+		neigh.add( 0, 1, b * 1.0);
+	}
+	if (neighbors >= 4) {
+		neigh.add( 1, 1, b * 1.0/sqrt(2.0));
+		neigh.add(-1, 1, b * 1.0/sqrt(2.0));
+	}
 
 	Mat out = image.clone();
 
 	HighestLevelRule hrule(pixels + 2);
 	FIFORule frule(pixels + 2);
 
-	Image im(&image, &out, dynamic_cast<SelectionRule&>(frule), neigh);
+	SelectionRule* rule;
+	if (rarg == 'h') {
+		cout << "Using highest level selection rule." << endl;
+		rule = &hrule;
+	} else {
+		cout << "Using FIFO selection rule." << endl;
+		rule = &frule;
+	}
+
+	Image im(&image, &out, *rule, neigh);
 	im.restore(a, p);
 
 	imwrite(argv[optind + 1], out);
