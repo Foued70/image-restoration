@@ -42,15 +42,19 @@ int main(int argc, char *argv[])
 			break;
 		case '?':
 			if (optopt == 'p')
-				fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+				fprintf(stderr, "Option -%c requires an argument.\n",
+						optopt);
 			if (optopt == 'b')
-				fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+				fprintf(stderr, "Option -%c requires an argument.\n",
+						optopt);
 			if (optopt == 'n')
-				fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-			else if (isprint (optopt))
-				fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+				fprintf(stderr, "Option -%c requires an argument.\n",
+						optopt);
+			else if (isprint(optopt))
+				fprintf(stderr, "Unknown option `-%c'.\n", optopt);
 			else
-				fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
+				fprintf(stderr, "Unknown option character `\\x%x'.\n",
+						optopt);
 			return 1;
 		default:
 			exit(1);
