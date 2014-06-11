@@ -58,12 +58,8 @@ public:
 			int source, int sink, int limit);
 	void DFS(int source, int sink);
 
-	int activeNodes(void);
 	int outFlow(int source);
 	int inFlow(int sink);
-	int outCap(int source);
-	int inCap(int sink);
-	int totalHeight(void);
 
 	bool checkExcess(void);
 	bool checkCapacity(void);

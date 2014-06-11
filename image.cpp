@@ -13,10 +13,12 @@ int f(int u, int v, int p) {
 	return p == 2 ? (u - v) * (u - v) : abs(u - v);
 }
 
+/* Fidelity energy term. */
 int Ei(int label, int pix, int u, int p) {
 	return (f(label+1, pix, p) - f(label, pix, p)) * (1 - u);
 }
 
+/* Regularization energy term. */
 int Eij(int up, int uq) {
 	return (1 - 2 * uq) * up + uq;
 }
@@ -27,19 +29,19 @@ void Image::createEdges() {
 	int C = Eij(1, 0);
 	int D = Eij(1, 1);
 
-	cout << "A = " << A << endl;
-	cout << "B = " << B << endl;
-	cout << "C = " << C << endl;
-	cout << "D = " << D << endl;
-
 	/*
 	 * Add sink edges first, so that the first push in discharge
-	 * will go towards the sink.
+	 * will go towards the sink. The capacities are set up in
+	 * setupSourceSink.
 	 */
 	for (int i = 0; i < pixels; ++i) {
 		t_index[i] = network.addEdge(i, sink, 0);
 	}
 
+	/*
+	 * Create internal edges, which do not depend on the current
+	 * level.
+	 */
 	for (int j = 0; j < rows; ++j) {
 		for (int i = 0; i < cols; ++i) {
 			Neighborhood::const_iterator it;
@@ -58,11 +60,20 @@ void Image::createEdges() {
 		}
 	}
 
+	/*
+	 * Add edges from the source. Capacities are set up in
+	 * setupSourceSink.
+	 */
 	for (int i = 0; i < pixels; ++i) {
 		s_index[i] = network.addEdge(source, i, 0);
 	}
 }
 
+/*
+ * Change the capacities of the edges connecting the source
+ * and the sink to the rest of the network, as these edges
+ * are dependent on the current level.
+ */
 void Image::setupSourceSink(int alpha, int label, int p) {
 
 	fill(s_caps.begin(), s_caps.end(), 0);
@@ -96,7 +107,7 @@ void Image::restore(int alpha, int p) {
 	createEdges();
 
 	for (int label = 255; label >= 0; --label) {
-		//cout << "Label: " << label << endl;
+		cout << "Label: " << label << endl;
 
 		setupSourceSink(alpha, label, p);
 #ifdef DINIC
@@ -106,6 +117,7 @@ void Image::restore(int alpha, int p) {
 		network.minCutPushRelabel(source, sink);
 #endif
 
+		/* Use the cut to update the output image. */
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {
 				if (!network.cut[j*cols + i])

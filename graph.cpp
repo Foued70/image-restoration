@@ -8,6 +8,7 @@
 
 using namespace std;
 
+/* Add an edge from one vertex to another. */
 int FlowGraph::addEdge(int from, int to, int cap) {
 	G[from].push_back(Edge(from, to, cap, G[to].size()));
 	if (from == to) G[from].back().index++;
@@ -17,11 +18,19 @@ int FlowGraph::addEdge(int from, int to, int cap) {
 	return index;
 }
 
+/*
+ * Add an edge and at the same time an antiparallel edge
+ * with the same capacity.
+ */
 void FlowGraph::addDoubleEdge(int from, int to, int cap) {
 	G[from].push_back(Edge(from, to, cap, G[to].size()));
 	G[to].push_back(Edge(to, from, cap, G[from].size() - 1));
 }
 
+/*
+ * Change the capacity of an edge. Need the from-vertex and
+ * the index of the edge in its edge list (returned from addEdge.
+ */
 void FlowGraph::changeCapacity(int from, int index, int cap) {
 	int to = G[from][index].to;
 	int diff = G[from][index].flow - cap;
@@ -39,6 +48,7 @@ void FlowGraph::changeCapacity(int from, int index, int cap) {
 	}
 }
 
+/* Reset all flow and excess. */
 void FlowGraph::resetFlow() {
 	for (int i = 0; i < G.size(); ++i) {
 		for (int j = 0; j < G[i].size(); ++j) {
@@ -48,11 +58,13 @@ void FlowGraph::resetFlow() {
 	fill(excess.begin(), excess.end(), 0);
 }
 
+/* Reset all distance labels. */
 void FlowGraph::resetHeights() {
 	fill(height.begin(), height.end(), 0);
 	fill(count.begin(), count.end(), 0);
 }
 
+/* Push along an edge. */
 void FlowGraph::push(Edge &e) {
 	int flow = min(e.cap - e.flow, excess[e.from]);
 	excess[e.from] -= flow;
@@ -63,6 +75,7 @@ void FlowGraph::push(Edge &e) {
 	rule.add(e.to, height[e.to], excess[e.to]);
 }
 
+/* Relabel a vertex. */
 void FlowGraph::relabel(int u) {
 	count[height[u]]--;
 	height[u] = 2*N;
@@ -82,6 +95,7 @@ void FlowGraph::relabel(int u) {
 	}
 }
 
+/* Relabel all vertices over the gap h to label N. */
 void FlowGraph::gap(int h) {
 	int c = 0;
 	for (int i = 0; i < G.size(); ++i) {
@@ -97,6 +111,7 @@ void FlowGraph::gap(int h) {
 	rule.gap(h);
 }
 
+/* Discharge a vertex. */
 void FlowGraph::discharge(int u) {
 	int i;
 	for (i = 0; i < G[u].size() && excess[u] > 0; ++i) {
@@ -107,6 +122,7 @@ void FlowGraph::discharge(int u) {
 	}
 
 	if (excess[u] > 0) {
+		/* Check if a gap will appear. */
 		if (count[height[u]] == 1)
 			gap(height[u]);
 		else
@@ -114,6 +130,7 @@ void FlowGraph::discharge(int u) {
 	}
 }
 
+/* Run the push-relabel algorithm to find the min-cut. */
 void FlowGraph::minCutPushRelabel(int source, int sink) {
 	height[source] = N;
 
@@ -127,17 +144,23 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	excess[source] = 0;
 
 	int c = 0;
+	/* Loop over active nodes using selection rule. */
 	while (!rule.empty()) {
 		c++;
 		int u = rule.next();
 		discharge(u);
 	}
 
+	/* Output the cut based on vertex heights. */
 	for (int i = 0; i < cut.size(); ++i) {
 		cut[i] = height[i] >= N;
 	}
 }
 
+/*
+ * Depth-first-search used to find a cut at the
+ * end of Diniz.
+ */
 void FlowGraph::DFS(int source, int sink) {
 	stack<int> s;
 	vector<bool> visited(N);
@@ -160,6 +183,7 @@ void FlowGraph::DFS(int source, int sink) {
 	}
 }
 
+/* Diniz min-cut algorithm. */
 void FlowGraph::minCutDinic(int source, int sink) {
 	maxFlowDinic(source, sink);
 
@@ -167,6 +191,10 @@ void FlowGraph::minCutDinic(int source, int sink) {
 	DFS(source, sink);
 }
 
+/*
+ * Recursive blocking flow algorithm, from the current
+ * vertex u, from which we can at most send limit flow.
+ */
 int FlowGraph::blockingFlow(vector<int> &level, int u,
 		int source, int sink, int limit) {
 	if (limit <= 0) return 0;
@@ -178,6 +206,7 @@ int FlowGraph::blockingFlow(vector<int> &level, int u,
 
 		int res = G[u][i].cap - G[u][i].flow;
 
+		/* Recurse on vertices one level closer to sink. */
 		if (level[G[u][i].to] == level[u] + 1 && res > 0) {
 			int aug = blockingFlow(
 					level,
@@ -200,6 +229,7 @@ int FlowGraph::blockingFlow(vector<int> &level, int u,
 	return throughput;
 }
 
+/* Diniz max-flow algorithm. */
 int FlowGraph::maxFlowDinic(int source, int sink) {
 
 	vector<int> level(N);
@@ -209,6 +239,10 @@ int FlowGraph::maxFlowDinic(int source, int sink) {
 
 		queue<int> nq;
 
+		/*
+		 * Fill the level vector using a basic breadth-first
+		 * search.
+		 */
 		nq.push(source);
 		level[source] = 1;
 		while (!nq.empty()) {
@@ -282,14 +316,6 @@ bool FlowGraph::checkCount(void) {
 	return true;
 }
 
-int FlowGraph::activeNodes(void) {
-	int c = 0;
-	for (int i = 0; i < excess.size(); ++i) {
-		if (excess[i] > 0) c++;
-	}
-	return c;
-}
-
 int FlowGraph::outFlow(int source) {
 	int c = 0;
 	for (int i = 0; i < G[source].size(); ++i) {
@@ -302,22 +328,6 @@ int FlowGraph::inFlow(int sink) {
 	int c = 0;
 	for (int i = 0; i < G[sink].size(); ++i) {
 		c += G[sink][i].flow;
-	}
-	return c;
-}
-
-int FlowGraph::outCap(int source) {
-	int c = 0;
-	for (int i = 0; i < G[source].size(); ++i) {
-		c += G[source][i].cap;
-	}
-	return c;
-}
-
-int FlowGraph::inCap(int sink) {
-	int c = 0;
-	for (int i = 0; i < G[sink].size(); ++i) {
-		c += G[G[sink][i].to][G[sink][i].index].cap;
 	}
 	return c;
 }
