@@ -8,6 +8,7 @@
 #include "selectionrule.hpp"
 #include "neighborhood.hpp"
 #include "image.hpp"
+#include "sobel.hpp"
 
 using namespace std;
 using namespace cv;
@@ -15,19 +16,43 @@ using namespace cv;
 int main(int argc, char *argv[])
 {
 	int blur = 10;
-	int c;
 	int scale = 1;
 	int delta = 0;
 
+	int p = 2;
+	double beta = 10;
+	char rarg = 'f';
+	int neighbors = 8;
+	int index;
+	int c;
+
 	/* Read command line parameters beta and p. */
-	while ((c = getopt(argc, argv, "b:")) != -1) {
+	while ((c = getopt(argc, argv, "b:p:n:fh")) != -1) {
 		switch (c)
 		{
+		case 'p':
+			p = atoi(optarg);
+			break;
 		case 'b':
-			blur = atoi(optarg);
+			beta = atof(optarg);
+			break;
+		case 'f':
+			rarg = 'f';
+			break;
+		case 'h':
+			rarg = 'h';
+			break;
+		case 'n':
+			neighbors = atoi(optarg);
 			break;
 		case '?':
+			if (optopt == 'p')
+				fprintf(stderr, "Option -%c requires an argument.\n",
+						optopt);
 			if (optopt == 'b')
+				fprintf(stderr, "Option -%c requires an argument.\n",
+						optopt);
+			if (optopt == 'n')
 				fprintf(stderr, "Option -%c requires an argument.\n",
 						optopt);
 			else if (isprint(optopt))
@@ -62,61 +87,98 @@ int main(int argc, char *argv[])
 	GaussianBlur(image, image, Size(3,3), 0, 0, BORDER_DEFAULT);
 
 	Mat grad_x, grad_y;
-	Mat abs_grad_x, abs_grad_y;
 
 	Sobel(image, grad_x, CV_16S, 1, 0, 3, scale, delta, BORDER_DEFAULT);
-	convertScaleAbs(grad_x, abs_grad_x);
-
 	Sobel(image, grad_y, CV_16S, 0, 1, 3, scale, delta, BORDER_DEFAULT);
-	convertScaleAbs(grad_y, abs_grad_y);
 
-	// Approximate Total Gradient
-	addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad);
+	Mat x_sq, y_sq, xy;
 
-	imwrite(argv[optind + 1], grad);
+	x_sq = grad_x.mul(grad_x);
+	y_sq = grad_y.mul(grad_y);
+	xy   = grad_x.mul(grad_y);
 
-	//int sz[] = {10,10,2,2};
-	int sz[] = {2,2,10,10};
-	Mat L(4, sz, CV_32F);
-	L = Scalar(0);
+	GaussianBlur(x_sq, x_sq, Size(5,5), 0, 0, BORDER_DEFAULT);
+	GaussianBlur(y_sq, y_sq, Size(5,5), 0, 0, BORDER_DEFAULT);
+	GaussianBlur(xy  , xy  , Size(5,5), 0, 0, BORDER_DEFAULT);
 
-	Mat plane;
+	double g = 1000.0;
 
-	const Mat* arr = { &L };
-	NAryMatIterator it(&arr, &plane, 1);
+	Mat_<Tensor> tensors = Mat_<Tensor>::zeros(image.rows, image.cols);
 
-	cout << it.nplanes << endl;
-	for(int p = 0; p < it.nplanes; ++p, ++it)
-	{
-		cout << it.planes[p] << endl;
-		cout << "BLOOP" << endl;
-	}
+	Mat evec, eval;
 
-	Mat_<int> b(2, 2, 0);
-	Mat_<Mat_<int> > hey = Mat_<Mat_<int> >::zeros(10, 10);
+	for (int i = 0; i < image.rows; i += 10) {
+		for (int j = 0; j < image.cols; j += 10) {
+			tensors(i, j) = Tensor(
+					x_sq.at<short>(i,j),
+					xy.at<short>(i,j),
+					xy.at<short>(i,j),
+					y_sq.at<short>(i,j)
+					);
 
-	//hey(0,3).create(2, 2); // = Mat_<int>(2, 2, 1);
-	cout << hey(3,3) << endl;
-	//hey(3,3).create(2,2);
+			eigen(tensors(i, j), eval, evec);
 
-	for (int i = 0; i < hey.rows; ++i) {
-		for (int j = 0; j < hey.cols; ++j) {
-			//hey(i,j).create(2, 2);
+			double s1 = eval.at<double>(0,0);
+			double s2 = eval.at<double>(0,1);
+			double l1 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (g*g));
+			double l2 = 1.0;
+
+			Point2f p1(evec.at<double>(0,0), evec.at<double>(0,1));
+			Point2f p2(evec.at<double>(1,0), evec.at<double>(1,1));
+			line(image, Point(j, i), Point2f(j, i) + 9 * l1 * p1, 255);
+			line(image, Point(j, i), Point2f(j, i) + 9 * l2 * p2, 0);
 		}
 	}
+	imwrite(argv[optind + 1], image);
 
-	cout << hey.rows << " x " << hey.cols << endl;
+	cout << tensors(10,10) << endl;
 
-	typedef Matx<float,2,2> Tensor;
-	Mat_<Tensor> mt = Mat_<Tensor>::zeros(10,10);
-	mt(2,2) = Tensor(1,2,3,4);
-	cout << mt << endl;
-	cout << mt(2,2) << endl;
+	/*
+	 * Network only handles integer edges, so for floating
+	 * point beta parameters, we cheat a little bit.
+	 */
+	int a;
+	int b;
+	a = 1;
+	b = beta;
+	if (beta < 10) {
+		b = 100 * beta;
+		a = 100;
+	}
 
+	/*
+	 * Specify one quarter of the neighbors of a pixel. The rest
+	 * are added symmetrically on the other sides.
+	 */
+	Neighborhood neigh;
+	if (neighbors >= 2) {
+		neigh.add( 1, 0, b * 1.0);
+		neigh.add( 0, 1, b * 1.0);
+	}
+	if (neighbors >= 4) {
+		neigh.add( 1, 1, b * 1.0/sqrt(2.0));
+		neigh.add(-1, 1, b * 1.0/sqrt(2.0));
+	}
 
-	//hey(0,0).create(2, 2); // = Mat_<int>(2, 2, 1);
+	HighestLevelRule hrule(pixels + 2);
+	FIFORule frule(pixels + 2);
 
-	//cout << hey(0,0) << endl;
+	SelectionRule* rule;
+	if (rarg == 'h') {
+		cout << "Using highest level selection rule." << endl;
+		rule = &hrule;
+	} else {
+		cout << "Using FIFO selection rule." << endl;
+		rule = &frule;
+	}
+
+	Mat out = image.clone();
+
+	Image im(&image, &out, *rule, neigh);
+	//im.restore(a, p);
+	im.restoreAnisotropicTV(a, p, tensors);
+
+	//imwrite(argv[optind + 1], out);
 
 	return 0;
 }

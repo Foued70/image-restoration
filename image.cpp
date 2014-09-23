@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include "image.hpp"
 #include "neighborhood.hpp"
+#include "sobel.hpp"
 
 using namespace std;
 using namespace cv;
@@ -110,12 +111,27 @@ void Image::restore(int alpha, int p) {
 		cout << "Label: " << label << endl;
 
 		setupSourceSink(alpha, label, p);
-#ifdef DINIC
-		network.resetFlow();
-		network.minCutDinic(source, sink);
-#else
 		network.minCutPushRelabel(source, sink);
-#endif
+
+		/* Use the cut to update the output image. */
+		for (int j = 0; j < rows; ++j) {
+			for (int i = 0; i < cols; ++i) {
+				if (!network.cut[j*cols + i])
+					out->at<uchar>(j, i) = label;
+			}
+		}
+	}
+}
+
+void Image::restoreAnisotropicTV(int alpha, int p, Mat_<Tensors> tensors) {
+
+	createEdges();
+
+	for (int label = 255; label >= 0; --label) {
+		cout << "Label: " << label << endl;
+
+		setupSourceSink(alpha, label, p);
+		network.minCutPushRelabel(source, sink);
 
 		/* Use the cut to update the output image. */
 		for (int j = 0; j < rows; ++j) {
