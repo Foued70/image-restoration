@@ -132,10 +132,12 @@ int main(int argc, char *argv[])
 
 			double s1 = eval.at<double>(0);
 			double s2 = eval.at<double>(1);
+
 			if (s2 > s1)
 				fprintf(stderr, "OOPS: Wrong ordering of eigenvalues\n");
-			double l1 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (g*g));
-			double l2 = 1.0;
+
+			double l1 = 1.0;
+			double l2 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (g*g));
 
 			Mat eval2 = eval.clone();
 			eval2.at<double>(0) = l1;
