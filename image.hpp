@@ -6,6 +6,7 @@
 #include "graph.hpp"
 #include "selectionrule.hpp"
 #include "neighborhood.hpp"
+#include "sobel.hpp"
 
 class Image {
 private:
@@ -27,6 +28,7 @@ private:
 	SelectionRule& rule;
 
 	void createEdges();
+	void createEdgesAnisotropic(int beta, cv::Mat_<Tensor>& tensors);
 	void setupSourceSink(int alpha, int label, int p);
 
 public:
@@ -47,5 +49,6 @@ public:
 		sink(pixels + 1) {}
 
 	void restore(int alpha, int p);
+	void restoreAnisotropicTV(int alpha, int beta, int p, cv::Mat_<Tensor>& tensors);
 };
 

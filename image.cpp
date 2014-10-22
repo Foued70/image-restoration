@@ -1,7 +1,9 @@
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <set>
 #include <iterator>
+#include <cmath>
 #include <opencv2/opencv.hpp>
 #include "image.hpp"
 #include "neighborhood.hpp"
@@ -19,17 +21,7 @@ int Ei(int label, int pix, int u, int p) {
 	return (f(label+1, pix, p) - f(label, pix, p)) * (1 - u);
 }
 
-/* Regularization energy term. */
-int Eij(int up, int uq) {
-	return (1 - 2 * uq) * up + uq;
-}
-
 void Image::createEdges() {
-	int A = Eij(0, 0);
-	int B = Eij(0, 1);
-	int C = Eij(1, 0);
-	int D = Eij(1, 1);
-
 	/*
 	 * Add sink edges first, so that the first push in discharge
 	 * will go towards the sink. The capacities are set up in
@@ -45,7 +37,7 @@ void Image::createEdges() {
 	 */
 	for (int j = 0; j < rows; ++j) {
 		for (int i = 0; i < cols; ++i) {
-			Neighborhood::const_iterator it;
+			Neighborhood::iterator it;
 			for (it = neigh.begin(); it != neigh.end(); ++it) {
 
 				int x = i + it->x;
@@ -55,11 +47,67 @@ void Image::createEdges() {
 					network.addDoubleEdge(
 							j*cols + i,
 							y*cols + x,
-							it->w * B
+							it->w
 							);
 			}
 		}
 	}
+
+	/*
+	 * Add edges from the source. Capacities are set up in
+	 * setupSourceSink.
+	 */
+	for (int i = 0; i < pixels; ++i) {
+		s_index[i] = network.addEdge(source, i, 0);
+	}
+}
+
+void Image::createEdgesAnisotropic(int beta, Mat_<Tensor>& tensors) {
+	/*
+	 * Add sink edges first, so that the first push in discharge
+	 * will go towards the sink. The capacities are set up in
+	 * setupSourceSink.
+	 */
+	for (int i = 0; i < pixels; ++i) {
+		t_index[i] = network.addEdge(i, sink, 0);
+	}
+
+	ofstream wfile;
+	wfile.open("weights", ios::out | ios::trunc);
+
+	/*
+	 * Create internal edges, which do not depend on the current
+	 * level.
+	 */
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j) {
+			Neighborhood::iterator it;
+
+			for (it = neigh.begin(); it != neigh.end(); ++it) {
+
+				int x = j + it->x;
+				int y = i + it->y;
+				
+				Mat ee = (Mat_<double>(2, 1) << it->x, it->y);
+				Mat M  = Mat(tensors(i,j));
+
+				double w = beta
+					* norm(ee) * norm(ee)
+					* determinant(M)
+					* it->dt
+					/ pow(ee.dot(M * ee), 3.0 / 2.0);
+
+				wfile << w << endl;
+				if (x >= 0 && x < cols && y >= 0 && y < rows)
+					network.addDoubleEdge(
+							i*cols + j,
+							y*cols + x,
+							w
+							);
+			}
+		}
+	}
+	wfile.close();
 
 	/*
 	 * Add edges from the source. Capacities are set up in
@@ -123,9 +171,9 @@ void Image::restore(int alpha, int p) {
 	}
 }
 
-void Image::restoreAnisotropicTV(int alpha, int p, Mat_<Tensors> tensors) {
+void Image::restoreAnisotropicTV(int alpha, int beta, int p, Mat_<Tensor>& tensors) {
 
-	createEdges();
+	createEdgesAnisotropic(beta, tensors);
 
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
