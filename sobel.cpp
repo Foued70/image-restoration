@@ -157,8 +157,8 @@ int main(int argc, char *argv[])
 
 			Point2f p1(evec.row(0));
 			Point2f p2(evec.row(1));
-			line(structure, Point(j, i), Point2f(j, i) + 9 * s1 * p1, 255);
-			line(structure, Point(j, i), Point2f(j, i) + 9 * s2 * p2, 0);
+			line(structure, Point(j, i), Point2f(j, i) + 9 * s2 * p1, 255);
+			line(structure, Point(j, i), Point2f(j, i) + 9 * s1 * p2, 0);
 		}
 	}
 	cout << "Writing structure to " << argv[optind + 1] << endl;
