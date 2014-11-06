@@ -22,25 +22,34 @@ public:
 class FlowGraph {
 private:
 	int N;
+	int source, sink;
 	std::vector<std::vector<Edge> > G;
 	std::vector<int> excess;
 	std::vector<int> height;
 	std::vector<int> count;
+	std::vector<int> s_index;
+	std::vector<int> t_index;
 	SelectionRule& rule;
 
 public:
 	std::vector<char> cut;
 
-	FlowGraph(int N, SelectionRule& rule) :
+	FlowGraph(int N, int source, int sink, SelectionRule& rule) :
 		N(N),
 		G(N),
 		excess(N),
 		height(N),
 		cut(N),
+		s_index(N),
+		t_index(N),
+		source(source),
+		sink(sink),
 		count(N+1),
        		rule(rule) {}
 
-	int addEdge(int from, int to, int cap);
+	int getSource() { return source; }
+	int getSink() { return sink; }
+	void addEdge(int from, int to, int cap);
 	void addDoubleEdge(int from, int to, int cap);
 	void changeCapacity(int from, int index, int cap);
 	void resetFlow();
@@ -52,8 +61,6 @@ public:
 	void discharge(int u);
 	void minCutPushRelabel(int source, int sink);
 
-	void minCutDinic(int source, int sink);
-	int maxFlowDinic(int source, int sink);
 	int blockingFlow(std::vector<int> &level, int u,
 			int source, int sink, int limit);
 	void DFS(int source, int sink);

@@ -8,47 +8,22 @@
 #include "neighborhood.hpp"
 #include "sobel.hpp"
 
-class Image {
-private:
-	cv::Mat *in, *out;
-	int rows, cols;
-	int pixels;
-	int source, sink;
+//void createEdges();
+void createEdgesAnisotropic(
+		FlowGraph& network,
+		Neighborhood& neigh,
+		int beta,
+		cv::Mat_<Tensor>& tensors
+		);
+void setupSourceSink(FlowGraph& network, cv::Mat& in, int alpha, int label, int p);
 
-	std::vector<int> s_index;
-	std::vector<int> t_index;
+//void restore(int alpha, int p);
 
-	std::vector<int> s_caps;
-	std::vector<int> t_caps;
-
-	FlowGraph network;
-
-	/* These would preferrably be pointers, not references */
-	Neighborhood& neigh;
-	SelectionRule& rule;
-
-	void createEdges();
-	void createEdgesAnisotropic(int beta, cv::Mat_<Tensor>& tensors);
-	void setupSourceSink(int alpha, int label, int p);
-
-public:
-	Image(cv::Mat *in, cv::Mat *out, SelectionRule& rule, Neighborhood& neigh) :
-		network(in->rows * in->cols + 2, rule),
-		in(in),
-		out(out),
-		rule(rule),
-		neigh(neigh),
-		rows(in->rows),
-		cols(in->cols),
-		pixels(rows * cols),
-		source(pixels),
-		s_index(pixels),
-		t_index(pixels),
-		s_caps(pixels),
-		t_caps(pixels),
-		sink(pixels + 1) {}
-
-	void restore(int alpha, int p);
-	void restoreAnisotropicTV(int alpha, int beta, int p, cv::Mat_<Tensor>& tensors);
-};
+void restoreAnisotropicTV(
+		cv::Mat& in,
+		cv::Mat& out,
+		cv::Mat_<Tensor>& tensors,
+		Neighborhood& neigh,
+		int alpha, int beta, int p
+		);
 

@@ -108,32 +108,32 @@ int main(int argc, char *argv[])
 	 * Specify one quarter of the neighbors of a pixel. The rest
 	 * are added symmetrically on the other sides.
 	 */
-	Neighborhood neigh;
-	if (neighbors >= 2) {
-		neigh.add( 1, 0, b * 1.0);
-		neigh.add( 0, 1, b * 1.0);
-	}
-	if (neighbors >= 4) {
-		neigh.add( 1, 1, b * 1.0/sqrt(2.0));
-		neigh.add(-1, 1, b * 1.0/sqrt(2.0));
-	}
+	//Neighborhood neigh;
+	//if (neighbors >= 2) {
+	//	neigh.add( 1, 0, b * 1.0);
+	//	neigh.add( 0, 1, b * 1.0);
+	//}
+	//if (neighbors >= 4) {
+	//	neigh.add( 1, 1, b * 1.0/sqrt(2.0));
+	//	neigh.add(-1, 1, b * 1.0/sqrt(2.0));
+	//}
 
-	Mat out = image.clone();
+	//Mat out = image.clone();
 
-	HighestLevelRule hrule(pixels + 2);
-	FIFORule frule(pixels + 2);
+	//HighestLevelRule hrule(pixels + 2);
+	//FIFORule frule(pixels + 2);
 
-	SelectionRule* rule;
-	if (rarg == 'h') {
-		cout << "Using highest level selection rule." << endl;
-		rule = &hrule;
-	} else {
-		cout << "Using FIFO selection rule." << endl;
-		rule = &frule;
-	}
+	//SelectionRule* rule;
+	//if (rarg == 'h') {
+	//	cout << "Using highest level selection rule." << endl;
+	//	rule = &hrule;
+	//} else {
+	//	cout << "Using FIFO selection rule." << endl;
+	//	rule = &frule;
+	//}
 
-	Image im(&image, &out, *rule, neigh);
-	im.restore(a, p);
+	//Image im(&image, &out, *rule, neigh);
+	//im.restore(a, p);
 
 	imwrite(argv[optind + 1], out);
 

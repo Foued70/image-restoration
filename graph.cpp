@@ -9,13 +9,17 @@
 using namespace std;
 
 /* Add an edge from one vertex to another. */
-int FlowGraph::addEdge(int from, int to, int cap) {
+void FlowGraph::addEdge(int from, int to, int cap) {
 	G[from].push_back(Edge(from, to, cap, G[to].size()));
 	if (from == to) G[from].back().index++;
 	int index = G[from].size() - 1;
 	G[to].push_back(Edge(to, from, 0, index));
 
-	return index;
+	if (from == source)
+		s_index[to] = index;
+
+	if (to == sink)
+		t_index[from] = index;
 }
 
 /*
@@ -31,8 +35,15 @@ void FlowGraph::addDoubleEdge(int from, int to, int cap) {
  * Change the capacity of an edge. Need the from-vertex and
  * the index of the edge in its edge list (returned from addEdge.
  */
-void FlowGraph::changeCapacity(int from, int index, int cap) {
-	int to = G[from][index].to;
+void FlowGraph::changeCapacity(int from, int to, int cap) {
+	int index;
+	if (from == source)
+		index = s_index[to];
+	else if (to == sink)
+		index = t_index[from];
+	else
+		assert(0);
+
 	int diff = G[from][index].flow - cap;
 
 	G[from][index].cap = cap;
@@ -42,9 +53,7 @@ void FlowGraph::changeCapacity(int from, int index, int cap) {
 		excess[to] -= diff;
 		G[from][index].flow = cap;
 		G[to][G[from][index].index].flow = -cap;
-#ifndef DINIC
 		rule.add(from, height[from], excess[from]);
-#endif
 	}
 }
 
@@ -183,14 +192,6 @@ void FlowGraph::DFS(int source, int sink) {
 	}
 }
 
-/* Diniz min-cut algorithm. */
-void FlowGraph::minCutDinic(int source, int sink) {
-	maxFlowDinic(source, sink);
-
-	fill(cut.begin(), cut.end(), false);
-	DFS(source, sink);
-}
-
 /*
  * Recursive blocking flow algorithm, from the current
  * vertex u, from which we can at most send limit flow.
@@ -227,43 +228,6 @@ int FlowGraph::blockingFlow(vector<int> &level, int u,
 	}
 
 	return throughput;
-}
-
-/* Diniz max-flow algorithm. */
-int FlowGraph::maxFlowDinic(int source, int sink) {
-
-	vector<int> level(N);
-
-	while (true) {
-		fill(level.begin(), level.end(), 0);
-
-		queue<int> nq;
-
-		/*
-		 * Fill the level vector using a basic breadth-first
-		 * search.
-		 */
-		nq.push(source);
-		level[source] = 1;
-		while (!nq.empty()) {
-			int u = nq.front();
-			nq.pop();
-			for (int i = 0; i < G[u].size(); ++i) {
-				if (level[G[u][i].to] > 0) continue;
-
-				if (G[u][i].cap > G[u][i].flow) {
-					level[G[u][i].to] = level[u] + 1;
-					nq.push(G[u][i].to);
-				}
-			}
-		}
-
-		if (level[sink] == 0) break;
-
-		blockingFlow(level, source, source, sink, 1000000000);
-	}
-
-	return outFlow(source);
 }
 
 bool FlowGraph::checkExcess(void) {
