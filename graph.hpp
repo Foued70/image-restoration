@@ -61,10 +61,6 @@ public:
 	void discharge(int u);
 	void minCutPushRelabel(int source, int sink);
 
-	int blockingFlow(std::vector<int> &level, int u,
-			int source, int sink, int limit);
-	void DFS(int source, int sink);
-
 	int outFlow(int source);
 	int inFlow(int sink);
 
