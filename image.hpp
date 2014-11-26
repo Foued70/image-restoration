@@ -13,7 +13,7 @@ void createEdgesAnisotropic(
 		FlowGraph& network,
 		Neighborhood& neigh,
 		int beta,
-		cv::Mat_<Tensor>& tensors
+		const cv::Mat_<Tensor>& tensors
 		);
 void setupSourceSink(FlowGraph& network, cv::Mat& in, int alpha, int label, int p);
 

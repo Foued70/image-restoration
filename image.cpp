@@ -67,7 +67,7 @@ void createEdgesAnisotropic(
 		FlowGraph& network,
 		Neighborhood& neigh,
 		int beta,
-		Mat_<Tensor>& tensors
+		const Mat_<Tensor>& tensors
 		) {
 
 	int rows = tensors.rows;
@@ -96,21 +96,26 @@ void createEdgesAnisotropic(
 				int x = j + it->x;
 				int y = i + it->y;
 				
-				Mat ee = (Mat_<double>(2, 1) << it->x, it->y);
-				Mat M  = Mat(tensors(i,j));
+				if (x >= 0 && x < cols && y >= 0 && y < rows) {
 
-				double w = beta
-					* norm(ee) * norm(ee)
-					* determinant(M)
-					* it->dt
-					/ pow(ee.dot(M * ee), 3.0 / 2.0);
+					Mat ee = (Mat_<double>(2, 1) << it->x, it->y);
+					Mat M1 = Mat(tensors(i, j));
+					Mat M2 = Mat(tensors(y, x));
 
-				if (x >= 0 && x < cols && y >= 0 && y < rows)
+					Mat M3 = (M1 + M2) / 2.0;
+
+					double w = beta
+						* norm(ee) * norm(ee)
+						* determinant(M3)
+						* it->dt
+						/ pow(ee.dot(M3 * ee), 3.0 / 2.0);
+
 					network.addDoubleEdge(
 							i*cols + j,
 							y*cols + x,
 							w
 							);
+				}
 			}
 		}
 	}
