@@ -2,6 +2,7 @@
 #include <queue>
 #include <stack>
 #include <vector>
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 
@@ -87,6 +88,12 @@ void FlowGraph::push(Edge &e) {
 	rule.add(e.to, height[e.to], excess[e.to]);
 }
 
+/* Push given flow along an edge. */
+void FlowGraph::push(Edge &e, int f) {
+	e.flow += flow;
+	G[e.to][e.index].flow -= flow;
+}
+
 /* Relabel a vertex. */
 void FlowGraph::relabel(int u) {
 	count[height[u]]--;
@@ -165,6 +172,129 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	/* Output the cut based on vertex heights. */
 	for (size_t i = 0; i < cut.size(); ++i) {
 		cut[i] = height[i] >= N;
+	}
+}
+
+/*
+ * Send as much flow as possible through paths of length
+ * at most 2, and set up the status of the vertices.
+ */
+void FlowGraph::initBK(int source, int sink) {
+	for (int i = 0; i < G[source].size(); ++i) {
+
+	}
+
+	active[source] = 1;
+	active[sink]   = 1;
+	color[source]  = 1;
+	color[sink]    = 2;
+
+	bkq.push(source);
+	bkq.push(sink);
+}
+
+int FlowGraph::treeCap(int p, int i, int col) {
+	if (col == 1)
+		return G[p][i].cap - G[p][i].flow;
+	else if (col == 2)
+		return G[G[p][i].to][G[p][i].index].cap
+			- G[G[p][i].to][G[p][i].index].flow;
+	else
+		return 0;
+}
+
+void FlowGraph::grow(vector<Edge*>& path) {
+	assert(path.empty());
+
+	while (!bkq.empty()) {
+		int p = bkq.front();
+
+		for (int i = 0; i < G[p].size(); ++i) {
+			int q = G[p][i].to;
+			if (treeCap(p, i, color[p]) > 0) {
+				if (color[q] == 0) {
+					color[q] = color[p];
+					active[q] = 1;
+					bkq.push(q);
+				}
+				else if (color[q] != color[p]) {
+					int u, v;
+					if (color[p] == 1) {
+						u = p;
+						v = q;
+						path.push_back(&G[p][i]);
+					}
+					else {
+						u = q;
+						v = p;
+						path.push_back(&G[q][G[p][i].index]);
+					}
+
+					/* First pushback from cut to s */
+					int cur = u;
+					while (cur != source) {
+						path.push_back(parent[u]);
+						cur = parent[cur].from;
+					}
+
+					/* Then reverse */
+					reverse(path.begin(), path.end());
+
+					/* Then pushback from cut to t */
+					cur = v;
+					while (cur != sink) {
+						path.push_back(parent[v]);
+						cur = parent[cur].to;
+					}
+
+					return;
+				}
+			}
+		}
+
+		bkq.pop();
+		active[p] = 0;
+	}
+
+	/* Path is empty */
+}
+
+void FlowGraph::augment(vector<Edge*>& path) {
+	assert(path.size() >= 1);
+
+	int m = 1000000000;
+
+	for (int i = 0; i < path.size(); ++i) {
+		m = max(m, path[i]->cap - path[i]->flow);
+	}
+
+	cout << "Bottleneck: " << m << endl;
+
+	for (int i = 0; i < path.size(); ++i) {
+		/* Check for saturation */
+		if (path[i]->cap - path[i]->flow == m) {
+			// orphan some stuff
+		}
+		push(*path[i], m);
+	}
+}
+
+void FlowGraph::adopt() {
+	// boop
+}
+
+void FlowGraph::minCutBK(int source, int sink) {
+	initBK(source, sink);
+
+	while (true) {
+		vector<Edge*> path;
+		grow(path);
+
+		if (path.empty())
+			break;
+
+		augment(path);
+		adopt();
 	}
 }
 

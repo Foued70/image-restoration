@@ -31,6 +31,11 @@ private:
 	std::vector<int> count;
 	SelectionRule& rule;
 
+	/* BK stuff */
+	std::vector<int> active;
+	std::vector<int> color; // 0 = free, 1 = source, 2 = sink
+	std::vector<Edge*> parent;
+	std::queue<int> bkq;
 public:
 	std::vector<char> cut;
 
@@ -45,6 +50,9 @@ public:
 		t_index(N),
 		count(N+1),
        		rule(rule),
+		active(N),
+		color(N),
+		parent(N),
 		cut(N) {}
 
 	int getSource() { return source; }
@@ -60,6 +68,13 @@ public:
 	void gap(int h);
 	void discharge(int u);
 	void minCutPushRelabel(int source, int sink);
+
+
+	void minCutBK(int source, int sink);
+	void augment(std::vector<int>& path);
+	void initBK(int source, int sink);
+	int treeCap(int p, int i, int col);
+	void grow(std::vector<int>& path);
 
 	int outFlow(int source);
 	int inFlow(int sink);
