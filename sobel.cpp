@@ -18,7 +18,9 @@ void createAnisotropyTensor(
 		Mat& in,
 		double sigma,
 		double rho,
-		double gamma
+		double gamma,
+		char *fstructure,
+		char *fedge
 		) {
 
 	int scale = 1;
@@ -30,12 +32,22 @@ void createAnisotropyTensor(
 	int cols = in.cols;
 	int pixels = rows * cols;
 
-	GaussianBlur(in, blurred, Size(0,0), sigma, 0, BORDER_DEFAULT);
+	GaussianBlur(in, blurred, Size(0,0), sigma, 0, BORDER_REFLECT);
 
 	Mat grad_x, grad_y;
+	Mat kernel;
 
-	Sobel(blurred, grad_x, CV_16S, 1, 0, 3, scale, delta, BORDER_DEFAULT);
-	Sobel(blurred, grad_y, CV_16S, 0, 1, 3, scale, delta, BORDER_DEFAULT);
+	Point anchor = Point(-1, -1);
+
+       	kernel = Mat::zeros(1, 3, CV_16S);
+
+	kernel.at<short>(0, 0) = -1;
+	kernel.at<short>(0, 1) = 0;
+	kernel.at<short>(0, 2) = 1;
+
+	filter2D(blurred, grad_x, CV_16S, kernel, anchor, 0, BORDER_REFLECT);
+	transpose(kernel, kernel);
+	filter2D(blurred, grad_y, CV_16S, kernel, anchor, 0, BORDER_REFLECT);
 
 	Mat x_sq, y_sq, xy;
 
@@ -43,12 +55,12 @@ void createAnisotropyTensor(
 	y_sq = grad_y.mul(grad_y);
 	xy   = grad_x.mul(grad_y);
 
-	GaussianBlur(x_sq, x_sq, Size(0,0), rho, 0, BORDER_DEFAULT);
-	GaussianBlur(y_sq, y_sq, Size(0,0), rho, 0, BORDER_DEFAULT);
-	GaussianBlur(xy  , xy  , Size(0,0), rho, 0, BORDER_DEFAULT);
+	GaussianBlur(x_sq, x_sq, Size(0,0), rho, 0, BORDER_REFLECT);
+	GaussianBlur(y_sq, y_sq, Size(0,0), rho, 0, BORDER_REFLECT);
+	GaussianBlur(xy  , xy  , Size(0,0), rho, 0, BORDER_REFLECT);
 
 	Mat evec, eval;
-
+	Mat edgedetect = in.clone();
 	for (int i = 0; i < in.rows; ++i) {
 		for (int j = 0; j < in.cols; ++j) {
 			Tensor b = Tensor(
@@ -74,8 +86,33 @@ void createAnisotropyTensor(
 			eval2.at<double>(0) = l1;
 			eval2.at<double>(1) = l2;
 			tensors(i, j) = Tensor(Mat(evec.t() * Mat::diag(eval2) * evec));
+
+			edgedetect.at<uchar>(i, j) = s1 / 255;
 		}
 	}
+
+	Mat structure;
+	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
+	for (int i = 0; i < in.rows; i += 10) {
+		for (int j = 0; j < in.cols; j += 10) {
+			Tensor b = tensors(i, j);
+
+			eigen(b, eval, evec);
+
+			double s1 = eval.at<double>(0);
+			double s2 = eval.at<double>(1);
+
+			Point2f p1(evec.row(0));
+			Point2f p2(evec.row(1));
+			line(structure, Point(j, i), Point2f(j, i) + 9 * s2 * p1, 255);
+			line(structure, Point(j, i), Point2f(j, i) + 9 * s1 * p2, 0);
+		}
+	}
+	cout << "Writing structure to " << fstructure << endl;
+	imwrite(fstructure, structure);
+
+	cout << "Writing edges to " << fedge << endl;
+	imwrite(fedge, edgedetect);
 }
 
 int main(int argc, char *argv[])
@@ -150,27 +187,9 @@ int main(int argc, char *argv[])
 	cout << "Using sigma = " << sigma << endl;
 
 	Mat_<Tensor> tensors = Mat_<Tensor>::zeros(image.rows, image.cols);
-	createAnisotropyTensor(tensors, image, sigma, rho, gamma);
+	createAnisotropyTensor(tensors, image, sigma, rho, gamma,
+			argv[optind + 1], argv[optind + 2]);
 
-	Mat evec, eval;
-	Mat structure = image.clone();
-	for (int i = 0; i < image.rows; i += 10) {
-		for (int j = 0; j < image.cols; j += 10) {
-			Tensor b = tensors(i, j);
-
-			eigen(b, eval, evec);
-
-			double s1 = eval.at<double>(0);
-			double s2 = eval.at<double>(1);
-
-			Point2f p1(evec.row(0));
-			Point2f p2(evec.row(1));
-			line(structure, Point(j, i), Point2f(j, i) + 9 * s2 * p1, 255);
-			line(structure, Point(j, i), Point2f(j, i) + 9 * s1 * p2, 0);
-		}
-	}
-	cout << "Writing structure to " << argv[optind + 1] << endl;
-	imwrite(argv[optind + 1], structure);
 
 	/*
 	 * Network only handles integer edges, so for floating
@@ -235,8 +254,8 @@ int main(int argc, char *argv[])
 
 	restoreAnisotropicTV(image, out, tensors, neigh, a, b, p);
 
-	cout << "Writing output to " << argv[optind + 2] << endl;
-	imwrite(argv[optind + 2], out);
+	cout << "Writing output to " << argv[optind + 3] << endl;
+	imwrite(argv[optind + 3], out);
 
 	return 0;
 }
