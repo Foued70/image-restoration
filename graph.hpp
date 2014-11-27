@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <vector>
+#include <list>
 #include <set>
 #include "selectionrule.hpp"
 
@@ -73,14 +74,13 @@ public:
 
 
 	void minCutBK(int source, int sink);
-	void augment(std::vector<Edge*>& path);
+	void augment(const std::list<Edge*>& path);
 	void initBK(int source, int sink);
 	int treeCap(int p, int i, int col);
 	int treeCap(Edge& e, int col);
 	int treeOrigin(int u);
-	void grow(std::vector<int>& path);
 	void adopt();
-	void grow(std::vector<Edge*>& path);
+	void grow(std::list<Edge*>& path);
 
 	int outFlow(int source);
 	int inFlow(int sink);
