@@ -180,6 +180,12 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
  * at most 2, and set up the status of the vertices.
  */
 void FlowGraph::initBK(int source, int sink) {
+	fill(active.begin(), active.end(), 0);
+	fill(color.begin(), color.end(), 0);
+	fill(parent.begin(), parent.end(), (Edge*)NULL);
+	orphans.clear();
+	std::queue<int> empty;
+	std::swap(bkq, empty);
 	for (int i = 0; i < G[source].size(); ++i) {
 
 	}
@@ -224,44 +230,70 @@ void FlowGraph::grow(vector<Edge*>& path) {
 
 		for (int i = 0; i < G[p].size(); ++i) {
 			int q = G[p][i].to;
-			if (treeCap(p, i, color[p]) > 0) {
-				if (color[q] == 0) {
-					color[q] = color[p];
-					active[q] = 1;
-					bkq.push(q);
+			if (treeCap(G[p][i], color[p]) <= 0)
+				continue;
+
+			if (color[q] == 0) {
+				color[q] = color[p];
+				active[q] = 1;
+				//cout << "Parent of " << q << " is now " << p << endl;
+				if (color[p] == 1) {
+					parent[q] = &G[p][i];
+					assert(treeOrigin(p) == source);
+				} else if (color[p] == 2) {
+					parent[q] = &G[q][G[p][i].index];
+					assert(treeOrigin(p) == sink);
+				} else {
+					cout << color[p] << endl;
+					assert(0);
 				}
-				else if (color[q] != color[p]) {
-					int u, v;
-					if (color[p] == 1) {
-						u = p;
-						v = q;
-						path.push_back(&G[p][i]);
-					}
-					else {
-						u = q;
-						v = p;
-						path.push_back(&G[q][G[p][i].index]);
-					}
 
-					/* First pushback from cut to s */
-					int cur = u;
-					while (cur != source) {
-						path.push_back(parent[u]);
-						cur = parent[cur]->from;
-					}
+				bkq.push(q);
+			}
+			else if (color[q] != color[p]) {
+				int u, v;
 
-					/* Then reverse */
-					reverse(path.begin(), path.end());
-
-					/* Then pushback from cut to t */
-					cur = v;
-					while (cur != sink) {
-						path.push_back(parent[v]);
-						cur = parent[cur]->to;
-					}
-
-					return;
+				if (color[p] == 1) {
+					u = p;
+					v = q;
+					path.push_back(&G[p][i]);
+					//cout << "path += " << G[p][i].from;
+					//cout << "-" << G[p][i].to << endl;
 				}
+				else if (color[p] == 2) {
+					u = q;
+					v = p;
+					path.push_back(&G[q][G[p][i].index]);
+					//cout << "path += " << G[q][G[p][i].index].from;
+					//cout << "-" << G[q][G[p][i].index].to << endl;
+				}
+				else {
+					assert(0);
+				}
+				//cout << "The trees meet! " << u << " -> " << v << endl;
+
+				/* First pushback from cut to s */
+				int cur = u;
+				while (cur != source) {
+					path.push_back(parent[cur]);
+					//cout << "path += " << parent[cur]->from << "-";
+					//cout << parent[cur]->to << endl;
+					cur = parent[cur]->from;
+				}
+
+				/* Then reverse */
+				reverse(path.begin(), path.end());
+
+				/* Then pushback from cut to t */
+				cur = v;
+				while (cur != sink) {
+					path.push_back(parent[cur]);
+					//cout << "path += " << parent[cur]->from << "-";
+					//cout << parent[cur]->to << endl;
+					cur = parent[cur]->to;
+				}
+
+				return;
 			}
 		}
 
@@ -278,10 +310,12 @@ void FlowGraph::augment(vector<Edge*>& path) {
 	int m = 1000000000;
 
 	for (int i = 0; i < path.size(); ++i) {
-		m = max(m, path[i]->cap - path[i]->flow);
+		//cout << path[i]->from << " -> ";
+		m = min(m, path[i]->cap - path[i]->flow);
 	}
-
-	cout << "Bottleneck: " << m << endl;
+	//cout << path[path.size()-1]->to;
+	//cout << " : " << m << endl;
+	//cout << "Saturation: " << m << endl;
 
 	for (int i = 0; i < path.size(); ++i) {
 		/* Check for saturation */
@@ -289,13 +323,19 @@ void FlowGraph::augment(vector<Edge*>& path) {
 			int u = path[i]->from;
 			int v = path[i]->to;
 
+			//cout << "Saturation at " << u << " -> " << v << endl;
+
 			if (color[u] == 1 && color[v] == 1) {
-				parent[v] = NULL;
-				orphans.push_back(v);
+				if (v != source && v != sink) {
+					orphans.push_back(v);
+					parent[v] = NULL;
+				}
 			}
 			if (color[u] == 2 && color[v] == 2) {
-				parent[u] = NULL;
-				orphans.push_back(u);
+				if (u != source && u != sink) {
+					orphans.push_back(u);
+					parent[u] = NULL;
+				}
 			}
 		}
 		push(*path[i], m);
@@ -319,10 +359,13 @@ int FlowGraph::treeOrigin(int u) {
 void FlowGraph::adopt() {
 	while (orphans.size() > 0) {
 		int u = orphans.back();
+		//cout << "Orphan: " << u << endl;
 		orphans.pop_back();
 
+		assert(color[u] != 0);
+
 		bool found = false;
-		for (int i = 0; i < G[u].size(); ++i) {
+		for (int i = 0; i < G[u].size() && !found; ++i) {
 			int v = G[u][i].to;
 
 			if (color[u] != color[v])
@@ -335,8 +378,10 @@ void FlowGraph::adopt() {
 			if (origin != source && origin != sink)
 				continue;
 
+			//cout << "Possible parent: " << v << endl;
 			/* Found a possible parent */
 
+			//cout << "Parent of " << u << " is now " << v << endl;
 			if (origin == source) {
 				parent[u] = &G[v][G[u][i].index];
 				found = true;
@@ -360,7 +405,10 @@ void FlowGraph::adopt() {
 					bkq.push(v);
 				}
 
-				if (parent[v]->to == u || parent[v]->from == u) {
+				if (v == source || v == sink)
+					continue;
+
+				if (parent[v] && (parent[v]->to == u || parent[v]->from == u)) {
 					orphans.push_back(v);
 					parent[v] = NULL;
 				}
@@ -379,18 +427,27 @@ void FlowGraph::minCutBK(int source, int sink) {
 
 	while (true) {
 		vector<Edge*> path;
+		//cout << "Growing path" << endl;
 		grow(path);
 
-		if (path.empty())
+		if (path.empty()) {
+			//cout << "Path was empty..." << endl;
 			break;
+		}
 
+		//cout << "Augmenting along path" << endl;
 		augment(path);
+		//cout << "Adopting orphans" << endl;
 		adopt();
 	}
 
 	for (int i = 0; i < cut.size(); ++i) {
-		cut[i] = color[i] == 1;
+		//cout << "BOOPING" << endl;
+		if (color[i] == 0) cout << "boop";
+		cut[i] = color[i] != 2;
 	}
+	assert(checkCapacity());
+	cout << "in+out: " << inFlow(sink) + outFlow(source) << endl;
 }
 
 bool FlowGraph::checkExcess(void) {
