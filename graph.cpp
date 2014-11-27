@@ -90,8 +90,8 @@ void FlowGraph::push(Edge &e) {
 
 /* Push given flow along an edge. */
 void FlowGraph::push(Edge &e, int f) {
-	e.flow += flow;
-	G[e.to][e.index].flow -= flow;
+	e.flow += f;
+	G[e.to][e.index].flow -= f;
 }
 
 /* Relabel a vertex. */
@@ -203,11 +203,24 @@ int FlowGraph::treeCap(int p, int i, int col) {
 		return 0;
 }
 
+int FlowGraph::treeCap(Edge& e, int col) {
+	if (col == 1)
+		return e.cap - e.flow;
+	else if (col == 2)
+		return G[e.to][e.index].cap - G[e.to][e.index].flow;
+	else
+		return 0;
+}
+
 void FlowGraph::grow(vector<Edge*>& path) {
 	assert(path.empty());
 
 	while (!bkq.empty()) {
 		int p = bkq.front();
+		if (!active[p]) {
+			bkq.pop();
+			continue;
+		}
 
 		for (int i = 0; i < G[p].size(); ++i) {
 			int q = G[p][i].to;
@@ -234,7 +247,7 @@ void FlowGraph::grow(vector<Edge*>& path) {
 					int cur = u;
 					while (cur != source) {
 						path.push_back(parent[u]);
-						cur = parent[cur].from;
+						cur = parent[cur]->from;
 					}
 
 					/* Then reverse */
@@ -244,7 +257,7 @@ void FlowGraph::grow(vector<Edge*>& path) {
 					cur = v;
 					while (cur != sink) {
 						path.push_back(parent[v]);
-						cur = parent[cur].to;
+						cur = parent[cur]->to;
 					}
 
 					return;
@@ -273,14 +286,92 @@ void FlowGraph::augment(vector<Edge*>& path) {
 	for (int i = 0; i < path.size(); ++i) {
 		/* Check for saturation */
 		if (path[i]->cap - path[i]->flow == m) {
-			// orphan some stuff
+			int u = path[i]->from;
+			int v = path[i]->to;
+
+			if (color[u] == 1 && color[v] == 1) {
+				parent[v] = NULL;
+				orphans.push_back(v);
+			}
+			if (color[u] == 2 && color[v] == 2) {
+				parent[u] = NULL;
+				orphans.push_back(u);
+			}
 		}
 		push(*path[i], m);
 	}
 }
 
+int FlowGraph::treeOrigin(int u) {
+	int cur = u;
+	while (parent[cur] != NULL) {
+		if (color[cur] == 1)
+			cur = parent[cur]->from;
+		else if (color[cur] == 2)
+			cur = parent[cur]->to;
+		else
+			assert(0);
+	}
+
+	return cur;
+}
+
 void FlowGraph::adopt() {
-	// boop
+	while (orphans.size() > 0) {
+		int u = orphans.back();
+		orphans.pop_back();
+
+		bool found = false;
+		for (int i = 0; i < G[u].size(); ++i) {
+			int v = G[u][i].to;
+
+			if (color[u] != color[v])
+				continue;
+
+			if (treeCap(G[v][G[u][i].index], color[u]) <= 0)
+				continue;
+
+			int origin = treeOrigin(v);
+			if (origin != source && origin != sink)
+				continue;
+
+			/* Found a possible parent */
+
+			if (origin == source) {
+				parent[u] = &G[v][G[u][i].index];
+				found = true;
+			} else if (origin == sink) {
+				parent[u] = &G[u][i];
+				found = true;
+			} else {
+				assert(0);
+			}
+		}
+
+		if (!found) {
+			for (int i = 0; i < G[u].size(); ++i) {
+				int v = G[u][i].to;
+
+				if (color[u] != color[v])
+					continue;
+
+				if (treeCap(G[v][G[u][i].index], color[v]) > 0) {
+					active[v] = 1;
+					bkq.push(v);
+				}
+
+				if (parent[v]->to == u || parent[v]->from == u) {
+					orphans.push_back(v);
+					parent[v] = NULL;
+				}
+			}
+
+			color[u] = 0;
+
+			active[u] = 0;
+			/* We might still have u in the queue */
+		}
+	}
 }
 
 void FlowGraph::minCutBK(int source, int sink) {
@@ -295,6 +386,10 @@ void FlowGraph::minCutBK(int source, int sink) {
 
 		augment(path);
 		adopt();
+	}
+
+	for (int i = 0; i < cut.size(); ++i) {
+		cut[i] = color[i] == 1;
 	}
 }
 

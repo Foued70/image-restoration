@@ -209,7 +209,7 @@ void restoreAnisotropicTV(
 		cout << "Label: " << label << endl;
 
 		setupSourceSink(network, in, alpha, label, p);
-		network.minCutPushRelabel(source, sink);
+		network.minCutBK(source, sink);
 
 		/* Use the cut to update the output image. */
 		for (int j = 0; j < rows; ++j) {
