@@ -86,6 +86,7 @@ public:
 	int inFlow(int sink);
 
 	bool checkExcess(void);
+	bool checkActive(void);
 	bool checkCapacity(void);
 	bool checkLabels(void);
 	bool checkCount(void);

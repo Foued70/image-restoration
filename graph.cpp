@@ -186,6 +186,8 @@ void FlowGraph::initBK(int source, int sink) {
 	orphans.clear();
 	std::queue<int> empty;
 	std::swap(bkq, empty);
+	resetFlow();
+
 	for (int i = 0; i < G[source].size(); ++i) {
 
 	}
@@ -235,7 +237,7 @@ void FlowGraph::grow(vector<Edge*>& path) {
 
 			if (color[q] == 0) {
 				color[q] = color[p];
-				active[q] = 1;
+
 				//cout << "Parent of " << q << " is now " << p << endl;
 				if (color[p] == 1) {
 					parent[q] = &G[p][i];
@@ -248,6 +250,7 @@ void FlowGraph::grow(vector<Edge*>& path) {
 					assert(0);
 				}
 
+				active[q] = 1;
 				bkq.push(q);
 			}
 			else if (color[q] != color[p]) {
@@ -283,6 +286,7 @@ void FlowGraph::grow(vector<Edge*>& path) {
 
 				/* Then reverse */
 				reverse(path.begin(), path.end());
+				//cout << "reverse" << endl;
 
 				/* Then pushback from cut to t */
 				cur = v;
@@ -317,6 +321,9 @@ void FlowGraph::augment(vector<Edge*>& path) {
 	//cout << " : " << m << endl;
 	//cout << "Saturation: " << m << endl;
 
+	assert(path[0]->from == source);
+	assert(path[path.size()-1]->to == sink);
+
 	for (int i = 0; i < path.size(); ++i) {
 		/* Check for saturation */
 		if (path[i]->cap - path[i]->flow == m) {
@@ -338,7 +345,7 @@ void FlowGraph::augment(vector<Edge*>& path) {
 				}
 			}
 		}
-		push(*path[i], m);
+		push(*(path[i]), m);
 	}
 }
 
@@ -442,17 +449,26 @@ void FlowGraph::minCutBK(int source, int sink) {
 	}
 
 	for (int i = 0; i < cut.size(); ++i) {
-		//cout << "BOOPING" << endl;
-		if (color[i] == 0) cout << "boop";
-		cut[i] = color[i] != 2;
+		if (color[i] == 0) cout << "boop" << endl;
+		cut[i] = color[i] == 1;
 	}
 	assert(checkCapacity());
-	cout << "in+out: " << inFlow(sink) + outFlow(source) << endl;
+	assert(checkActive());
 }
 
 bool FlowGraph::checkExcess(void) {
 	for (size_t i = 0; i < excess.size(); ++i) {
 		if (excess[i] < 0) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool FlowGraph::checkActive(void) {
+	for (int i = 0; i < active.size(); ++i) {
+		if (active[i] != 0) {
 			return false;
 		}
 	}
