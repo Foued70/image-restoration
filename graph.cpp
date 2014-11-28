@@ -220,9 +220,7 @@ int FlowGraph::treeCap(Edge& e, int col) {
 		return 0;
 }
 
-void FlowGraph::grow(list<Edge*>& path) {
-	assert(path.empty());
-
+Edge *FlowGraph::grow() {
 	while (!bkq.empty()) {
 		int p = bkq.front();
 		if (!active[p]) {
@@ -254,50 +252,19 @@ void FlowGraph::grow(list<Edge*>& path) {
 				bkq.push(q);
 			}
 			else if (color[q] != color[p]) {
-				int u, v;
 
 				if (color[p] == 1) {
-					u = p;
-					v = q;
-					path.push_back(&G[p][i]);
-					//cout << "path += " << G[p][i].from;
-					//cout << "-" << G[p][i].to << endl;
+					return &G[p][i];
 				}
 				else if (color[p] == 2) {
-					u = q;
-					v = p;
-					path.push_back(&G[q][G[p][i].index]);
-					//cout << "path += " << G[q][G[p][i].index].from;
-					//cout << "-" << G[q][G[p][i].index].to << endl;
+					return &G[q][G[p][i].index];
 				}
 				else {
 					assert(0);
 				}
 				//cout << "The trees meet! " << u << " -> " << v << endl;
 
-				/* First pushback from cut to s */
-				int cur = u;
-				while (cur != source) {
-					path.push_front(parent[cur]);
-					//cout << "path += " << parent[cur]->from << "-";
-					//cout << parent[cur]->to << endl;
-					cur = parent[cur]->from;
-				}
-
-				/* Then reverse */
-				//reverse(path.begin(), path.end());
-				//cout << "reverse" << endl;
-
-				/* Then pushback from cut to t */
-				cur = v;
-				while (cur != sink) {
-					path.push_back(parent[cur]);
-					//cout << "path += " << parent[cur]->from << "-";
-					//cout << parent[cur]->to << endl;
-					cur = parent[cur]->to;
-				}
-
-				return;
+				return NULL;
 			}
 		}
 
@@ -306,16 +273,22 @@ void FlowGraph::grow(list<Edge*>& path) {
 	}
 
 	/* Path is empty */
+	return NULL;
 }
 
-void FlowGraph::augment(const list<Edge*>& path) {
-	assert(path.size() >= 1);
+void FlowGraph::augment(Edge* e) {
+	int m = e->cap - e->flow;
 
-	int m = 1000000000;
+	Edge *cur = e;
+	while (cur != NULL) {
+		m = min(m, cur->cap - cur->flow);
+		cur = parent[cur->from];
+	}
 
-	for (auto it = path.cbegin(); it != path.cend(); ++it) {
-		//cout << path[i]->from << " -> ";
-		m = min(m, (*it)->cap - (*it)->flow);
+	cur = e;
+	while (cur != NULL) {
+		m = min(m, cur->cap - cur->flow);
+		cur = parent[cur->to];
 	}
 	//cout << path[path.size()-1]->to;
 	//cout << " : " << m << endl;
@@ -324,11 +297,13 @@ void FlowGraph::augment(const list<Edge*>& path) {
 	//assert(path[0]->from == source);
 	//assert(path[path.size()-1]->to == sink);
 
-	for (auto it = path.cbegin(); it != path.cend(); ++it) {
+	cur = e;
+	bool back = true;
+	while (cur != NULL) {
 		/* Check for saturation */
-		if ((*it)->cap - (*it)->flow == m) {
-			int u = (*it)->from;
-			int v = (*it)->to;
+		if (cur->cap - cur->flow == m) {
+			int u = cur->from;
+			int v = cur->to;
 
 			//cout << "Saturation at " << u << " -> " << v << endl;
 
@@ -345,7 +320,21 @@ void FlowGraph::augment(const list<Edge*>& path) {
 				}
 			}
 		}
-		push(**it, m);
+		push(*cur, m);
+
+		/*
+		 * If we reach the source, we must start again
+		 * in e, and go towards the sink.
+		 */
+		if (back) {
+			cur = parent[cur->from];
+			if (cur == NULL) {
+				back = false;
+				cur = parent[e->to];
+			}
+		} else {
+			cur = parent[cur->to];
+		}
 	}
 }
 
@@ -433,17 +422,17 @@ void FlowGraph::minCutBK(int source, int sink) {
 	initBK(source, sink);
 
 	while (true) {
-		list<Edge*> path;
+		Edge *e;
 		//cout << "Growing path" << endl;
-		grow(path);
+		e = grow();
 
-		if (path.empty()) {
+		if (e == NULL) {
 			//cout << "Path was empty..." << endl;
 			break;
 		}
 
 		//cout << "Augmenting along path" << endl;
-		augment(path);
+		augment(e);
 		//cout << "Adopting orphans" << endl;
 		adopt();
 	}

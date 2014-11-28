@@ -74,13 +74,13 @@ public:
 
 
 	void minCutBK(int source, int sink);
-	void augment(const std::list<Edge*>& path);
+	void augment(Edge *e);
 	void initBK(int source, int sink);
 	int treeCap(int p, int i, int col);
 	int treeCap(Edge& e, int col);
 	int treeOrigin(int u);
 	void adopt();
-	void grow(std::list<Edge*>& path);
+	Edge *grow();
 
 	int outFlow(int source);
 	int inFlow(int sink);
