@@ -59,6 +59,16 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		G[to][G[from][index].index].flow = -cap;
 		rule.add(from, height[from], excess[from]);
 	}
+	if (cap == 0) {
+		if (color[from] == 1 && color[to] == 1) {
+			parent[to] = NULL;
+			orphans.push(to);
+		}
+		if (color[from] == 2 && color[to] == 2) {
+			parent[from] = NULL;
+			orphans.push(from);
+		}
+	}
 }
 
 /* Reset all flow and excess. */
@@ -175,6 +185,10 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	}
 }
 
+void FlowGraph::pushDirect(int source, int sink) {
+
+}
+
 /*
  * Send as much flow as possible through paths of length
  * at most 2, and set up the status of the vertices.
@@ -183,10 +197,15 @@ void FlowGraph::initBK(int source, int sink) {
 	fill(active.begin(), active.end(), 0);
 	fill(color.begin(), color.end(), 0);
 	fill(parent.begin(), parent.end(), (Edge*)NULL);
-	orphans.clear();
-	std::queue<int> empty;
-	std::swap(bkq, empty);
+
+	std::queue<int> empty1;
+	std::swap(orphans, empty1);
+
+	std::queue<int> empty2;
+	std::swap(bkq, empty2);
+
 	resetFlow();
+	//adopt();
 
 	for (int i = 0; i < G[source].size(); ++i) {
 
@@ -309,13 +328,13 @@ void FlowGraph::augment(Edge* e) {
 
 			if (color[u] == 1 && color[v] == 1) {
 				if (v != source && v != sink) {
-					orphans.push_back(v);
+					orphans.push(v);
 					parent[v] = NULL;
 				}
 			}
 			if (color[u] == 2 && color[v] == 2) {
 				if (u != source && u != sink) {
-					orphans.push_back(u);
+					orphans.push(u);
 					parent[u] = NULL;
 				}
 			}
@@ -354,9 +373,9 @@ int FlowGraph::treeOrigin(int u) {
 
 void FlowGraph::adopt() {
 	while (orphans.size() > 0) {
-		int u = orphans.back();
+		int u = orphans.front();
 		//cout << "Orphan: " << u << endl;
-		orphans.pop_back();
+		orphans.pop();
 
 		assert(color[u] != 0);
 
@@ -404,8 +423,10 @@ void FlowGraph::adopt() {
 				if (v == source || v == sink)
 					continue;
 
-				if (parent[v] && (parent[v]->to == u || parent[v]->from == u)) {
-					orphans.push_back(v);
+				if (parent[v]
+						&& (parent[v]->to == u
+						||  parent[v]->from == u)) {
+					orphans.push(v);
 					parent[v] = NULL;
 				}
 			}
@@ -420,6 +441,7 @@ void FlowGraph::adopt() {
 
 void FlowGraph::minCutBK(int source, int sink) {
 	initBK(source, sink);
+	pushDirect(source, sink);
 
 	while (true) {
 		Edge *e;

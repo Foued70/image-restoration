@@ -37,7 +37,7 @@ private:
 	std::vector<int> color; // 0 = free, 1 = source, 2 = sink
 	std::vector<Edge*> parent;
 	std::queue<int> bkq;
-	std::vector<int> orphans;
+	std::queue<int> orphans;
 public:
 	std::vector<char> cut;
 
@@ -72,7 +72,7 @@ public:
 	void discharge(int u);
 	void minCutPushRelabel(int source, int sink);
 
-
+	void pushDirect(int source, int sink);
 	void minCutBK(int source, int sink);
 	void augment(Edge *e);
 	void initBK(int source, int sink);

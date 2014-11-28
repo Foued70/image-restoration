@@ -139,8 +139,8 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 	std::vector<int> s_caps(in.rows * in.cols);
 	std::vector<int> t_caps(in.rows * in.cols);
 
-	fill(s_caps.begin(), s_caps.end(), 0);
-	fill(t_caps.begin(), t_caps.end(), 0);
+	//fill(s_caps.begin(), s_caps.end(), 0);
+	//fill(t_caps.begin(), t_caps.end(), 0);
 
 	for (int j = 0; j < in.rows; ++j) {
 		for (int i = 0; i < in.cols; ++i) {
