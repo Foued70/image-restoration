@@ -35,7 +35,7 @@ void FlowGraph::addDoubleEdge(int from, int to, int cap) {
 
 /*
  * Change the capacity of an edge. Need the from-vertex and
- * the index of the edge in its edge list (returned from addEdge.
+ * the index of the edge in its edge list (returned from addEdge)
  */
 void FlowGraph::changeCapacity(int from, int to, int cap) {
 	int index;
