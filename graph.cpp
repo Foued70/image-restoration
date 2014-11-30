@@ -207,10 +207,6 @@ void FlowGraph::initBK(int source, int sink) {
 	resetFlow();
 	//adopt();
 
-	for (int i = 0; i < G[source].size(); ++i) {
-
-	}
-
 	active[source] = 1;
 	active[sink]   = 1;
 	color[source]  = 1;

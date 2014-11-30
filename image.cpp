@@ -19,7 +19,7 @@ int f(int u, int v, int p) {
 
 /* Fidelity energy term. */
 int Ei(int label, int pix, int u, int p) {
-	return (f(label+1, pix, p) - f(label, pix, p)) * (1 - u);
+	return (f(label+1, pix, p) - f(label, pix, p)) * u;
 }
 
 //void createEdges(FlowGraph& network, Neighborhood& neigh) {
@@ -146,12 +146,14 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 		for (int i = 0; i < in.cols; ++i) {
 			int e0 = Ei(label, in.at<uchar>(j, i), 0, p);
 			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
+			int e0init = Ei(0, in.at<uchar>(j, i), 0, p);
+			int e1init = Ei(0, in.at<uchar>(j, i), 1, p);
 
-			if (e0 < e1) {
-				s_caps[j*in.cols + i] += e1 - e0;
+			if (0 < e1) {
+				s_caps[j*in.cols + i] += e1 - 0;
 			}
 			else {
-				t_caps[j*in.cols + i] += e0 - e1;
+				t_caps[j*in.cols + i] += 0 - e1;
 			}
 		}
 	}
@@ -205,7 +207,7 @@ void restoreAnisotropicTV(
 
 	createEdgesAnisotropic(network, neigh, beta, tensors);
 
-	for (int label = 255; label >= 0; --label) {
+	for (int label = 0; label <= 255; ++label) {
 		cout << "Label: " << label << endl;
 
 		setupSourceSink(network, in, alpha, label, p);
