@@ -115,6 +115,32 @@ void createAnisotropyTensor(
 	imwrite(fedge, edgedetect);
 }
 
+void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma) {
+	int rows = in.rows;
+	int cols = in.cols;
+
+	Mat evec, eval;
+	for (int i = 0; i < in.rows; ++i) {
+		for (int j = 0; j < in.cols; ++j) {
+			Tensor b = Tensor(1, 1, 1, 1);
+
+			/* Returns the eigenvectors as row vectors! */
+			eigen(b, eval, evec);
+
+			double s1 = eval.at<double>(0);
+			double s2 = eval.at<double>(1);
+
+			double l1 = 1.0 / gamma;
+			double l2 = 1.0;
+
+			Mat eval2 = eval.clone();
+			eval2.at<double>(0) = l1;
+			eval2.at<double>(1) = l2;
+			tensors(i, j) = Tensor(Mat::diag(eval2));
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int p = 2;
@@ -187,9 +213,9 @@ int main(int argc, char *argv[])
 	cout << "Using sigma = " << sigma << endl;
 
 	Mat_<Tensor> tensors = Mat_<Tensor>::zeros(image.rows, image.cols);
-	createAnisotropyTensor(tensors, image, sigma, rho, gamma,
-			argv[optind + 1], argv[optind + 2]);
-
+	//createAnisotropyTensor(tensors, image, sigma, rho, gamma,
+	//		argv[optind + 1], argv[optind + 2]);
+	createUniformAnisotropyTensor(tensors, image, gamma);
 
 	/*
 	 * Network only handles integer edges, so for floating
@@ -219,14 +245,14 @@ int main(int argc, char *argv[])
 	neigh.add( 1,-1, b * 1.0/sqrt(2.0));
 	neigh.add(-1,-1, b * 1.0/sqrt(2.0));
 
-	neigh.add( 1, 2, b * 1.0/sqrt(2.0));
-	neigh.add( 2, 1, b * 1.0/sqrt(2.0));
-	neigh.add( 2,-1, b * 1.0/sqrt(2.0));
-	neigh.add( 1,-2, b * 1.0/sqrt(2.0));
-	neigh.add(-1, 2, b * 1.0/sqrt(2.0));
-	neigh.add(-2, 1, b * 1.0/sqrt(2.0));
-	neigh.add(-2,-1, b * 1.0/sqrt(2.0));
-	neigh.add(-1,-2, b * 1.0/sqrt(2.0));
+	//neigh.add( 1, 2, b * 1.0/sqrt(2.0));
+	//neigh.add( 2, 1, b * 1.0/sqrt(2.0));
+	//neigh.add( 2,-1, b * 1.0/sqrt(2.0));
+	//neigh.add( 1,-2, b * 1.0/sqrt(2.0));
+	//neigh.add(-1, 2, b * 1.0/sqrt(2.0));
+	//neigh.add(-2, 1, b * 1.0/sqrt(2.0));
+	//neigh.add(-2,-1, b * 1.0/sqrt(2.0));
+	//neigh.add(-1,-2, b * 1.0/sqrt(2.0));
 
 	//neigh.add(-3, 1, b * 1.0/sqrt(2.0));
 	//neigh.add(-3, 2, b * 1.0/sqrt(2.0));
