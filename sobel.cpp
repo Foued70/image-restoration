@@ -60,7 +60,7 @@ void createAnisotropyTensor(
 	GaussianBlur(xy  , xy  , Size(0,0), rho, 0, BORDER_REFLECT);
 
 	Mat evec, eval;
-	Mat edgedetect = in.clone();
+	Mat edgedetect(in.size(), CV_32F);
 	for (int i = 0; i < in.rows; ++i) {
 		for (int j = 0; j < in.cols; ++j) {
 			Tensor b = Tensor(
@@ -87,9 +87,13 @@ void createAnisotropyTensor(
 			eval2.at<double>(1) = l2;
 			tensors(i, j) = Tensor(Mat(evec.t() * Mat::diag(eval2) * evec));
 
-			edgedetect.at<uchar>(i, j) = s1 / 255;
+			edgedetect.at<float>(i, j) = s1;
 		}
 	}
+	normalize(edgedetect, edgedetect, 0, 255, NORM_MINMAX, CV_8U);
+
+	cout << "Writing edges to " << fedge << endl;
+	imwrite(fedge, edgedetect);
 
 	Mat structure;
 	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
@@ -110,9 +114,6 @@ void createAnisotropyTensor(
 	}
 	cout << "Writing structure to " << fstructure << endl;
 	imwrite(fstructure, structure);
-
-	cout << "Writing edges to " << fedge << endl;
-	imwrite(fedge, edgedetect);
 }
 
 void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma) {
@@ -213,9 +214,9 @@ int main(int argc, char *argv[])
 	cout << "Using sigma = " << sigma << endl;
 
 	Mat_<Tensor> tensors = Mat_<Tensor>::zeros(image.rows, image.cols);
-	//createAnisotropyTensor(tensors, image, sigma, rho, gamma,
-	//		argv[optind + 1], argv[optind + 2]);
-	createUniformAnisotropyTensor(tensors, image, gamma);
+	createAnisotropyTensor(tensors, image, sigma, rho, gamma,
+			argv[optind + 1], argv[optind + 2]);
+	//createUniformAnisotropyTensor(tensors, image, gamma);
 
 	/*
 	 * Network only handles integer edges, so for floating
@@ -234,42 +235,41 @@ int main(int argc, char *argv[])
 	 * Specify one quarter of the neighbors of a pixel. The rest
 	 * are added symmetrically on the other sides.
 	 */
+	cout << "Creating size " << neighbors << " neighborhood." << endl;
 	Neighborhood neigh;
-	neigh.add( 1, 0, b * 1.0);
-	neigh.add( 0, 1, b * 1.0);
-	neigh.add(-1, 0, b * 1.0);
-	neigh.add( 0,-1, b * 1.0);
+	if (neighbors >= 4) {
+		neigh.add( 1, 0, b * 1.0);
+		neigh.add( 0, 1, b * 1.0);
+		neigh.add(-1, 0, b * 1.0);
+		neigh.add( 0,-1, b * 1.0);
+	}
 
-	neigh.add( 1, 1, b * 1.0/sqrt(2.0));
-	neigh.add(-1, 1, b * 1.0/sqrt(2.0));
-	neigh.add( 1,-1, b * 1.0/sqrt(2.0));
-	neigh.add(-1,-1, b * 1.0/sqrt(2.0));
+	if (neighbors >= 8) {
+		neigh.add( 1, 1, b * 1.0/sqrt(2.0));
+		neigh.add(-1, 1, b * 1.0/sqrt(2.0));
+		neigh.add( 1,-1, b * 1.0/sqrt(2.0));
+		neigh.add(-1,-1, b * 1.0/sqrt(2.0));
+	}
 
-	//neigh.add( 1, 2, b * 1.0/sqrt(2.0));
-	//neigh.add( 2, 1, b * 1.0/sqrt(2.0));
-	//neigh.add( 2,-1, b * 1.0/sqrt(2.0));
-	//neigh.add( 1,-2, b * 1.0/sqrt(2.0));
-	//neigh.add(-1, 2, b * 1.0/sqrt(2.0));
-	//neigh.add(-2, 1, b * 1.0/sqrt(2.0));
-	//neigh.add(-2,-1, b * 1.0/sqrt(2.0));
-	//neigh.add(-1,-2, b * 1.0/sqrt(2.0));
+	if (neighbors >= 16) {
+		neigh.add8(1, 2, 1.0);
+	}
 
-	//neigh.add(-3, 1, b * 1.0/sqrt(2.0));
-	//neigh.add(-3, 2, b * 1.0/sqrt(2.0));
-	//neigh.add(-2, 3, b * 1.0/sqrt(2.0));
-	//neigh.add(-1, 3, b * 1.0/sqrt(2.0));
-	//neigh.add(-3,-1, b * 1.0/sqrt(2.0));
-	//neigh.add(-3,-2, b * 1.0/sqrt(2.0));
-	//neigh.add(-2,-3, b * 1.0/sqrt(2.0));
-	//neigh.add(-1,-3, b * 1.0/sqrt(2.0));
-	//neigh.add( 3, 1, b * 1.0/sqrt(2.0));
-	//neigh.add( 3, 2, b * 1.0/sqrt(2.0));
-	//neigh.add( 2, 3, b * 1.0/sqrt(2.0));
-	//neigh.add( 1, 3, b * 1.0/sqrt(2.0));
-	//neigh.add( 3,-1, b * 1.0/sqrt(2.0));
-	//neigh.add( 3,-2, b * 1.0/sqrt(2.0));
-	//neigh.add( 2,-3, b * 1.0/sqrt(2.0));
-	//neigh.add( 1,-3, b * 1.0/sqrt(2.0));
+	if (neighbors >= 32) {
+		neigh.add8(3, 1, 1.0);
+		neigh.add8(3, 2, 1.0);
+	}
+
+	if (neighbors >= 48) {
+		neigh.add8(1, 4, 1.0);
+		neigh.add8(3, 4, 1.0);
+	}
+
+	if (neighbors >= 72) {
+		neigh.add8(1, 5, 1.0);
+		neigh.add8(2, 5, 1.0);
+		neigh.add8(3, 5, 1.0);
+	}
 
 	neigh.setupAngles();
 	for (Neighborhood::iterator it = neigh.begin(); it != neigh.end(); ++it) {

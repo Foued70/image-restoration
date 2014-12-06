@@ -38,6 +38,17 @@ public:
 		v.insert(Coord(x, y, w));
 	}
 
+	void add8(int x, int y, int w) {
+		v.insert(Coord( x, y, w));
+		v.insert(Coord(-x, y, w));
+		v.insert(Coord( x,-y, w));
+		v.insert(Coord(-x,-y, w));
+		v.insert(Coord( y, x, w));
+		v.insert(Coord(-y, x, w));
+		v.insert(Coord( y,-x, w));
+		v.insert(Coord(-y,-x, w));
+	}
+
 	std::set<Coord, CoordCompare>::iterator begin() { return v.begin(); }
 	std::set<Coord, CoordCompare>::iterator end() { return v.end(); }
 	std::set<Coord, CoordCompare>::reverse_iterator rbegin() { return v.rbegin(); }
