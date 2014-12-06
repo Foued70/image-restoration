@@ -19,7 +19,10 @@ def main():
 
     i_img = misc.imread(args.ifile)
 
-    if args.type == 'normal':
+    if args.std == 0:
+        o_img = i_img
+
+    elif args.type == 'normal':
         o_img = i_img + np.random.normal(
                 args.mean,
                 args.std,
