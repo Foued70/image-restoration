@@ -45,29 +45,44 @@ void createAnisotropyTensor(
 	kernel.at<short>(0, 1) = 0;
 	kernel.at<short>(0, 2) = 1;
 
-	filter2D(blurred, grad_x, CV_16S, kernel, anchor, 0, BORDER_REFLECT);
+	filter2D(blurred, grad_x, CV_64F, kernel, anchor, 0, BORDER_REFLECT);
 	transpose(kernel, kernel);
-	filter2D(blurred, grad_y, CV_16S, kernel, anchor, 0, BORDER_REFLECT);
+	filter2D(blurred, grad_y, CV_64F, kernel, anchor, 0, BORDER_REFLECT);
 
 	Mat x_sq, y_sq, xy;
+	Mat x_sqr, y_sqr, xyr;
 
 	x_sq = grad_x.mul(grad_x);
 	y_sq = grad_y.mul(grad_y);
 	xy   = grad_x.mul(grad_y);
 
-	GaussianBlur(x_sq, x_sq, Size(0,0), rho, 0, BORDER_REFLECT);
-	GaussianBlur(y_sq, y_sq, Size(0,0), rho, 0, BORDER_REFLECT);
-	GaussianBlur(xy  , xy  , Size(0,0), rho, 0, BORDER_REFLECT);
+	GaussianBlur(x_sq, x_sqr, Size(0,0), rho, 0, BORDER_REFLECT);
+	GaussianBlur(y_sq, y_sqr, Size(0,0), rho, 0, BORDER_REFLECT);
+	GaussianBlur(xy  , xyr  , Size(0,0), rho, 0, BORDER_REFLECT);
 
 	Mat evec, eval;
-	Mat edgedetect(in.size(), CV_32F);
+	Mat edgedetect(in.size(), CV_64F);
+
+	Mat h = Mat::zeros(in.size(), CV_64F);
+	Mat s = Mat::zeros(in.size(), CV_64F);
+	Mat v = Mat::zeros(in.size(), CV_64F);
+	Mat hsv;
+	vector<Mat> channels;
+
 	for (int i = 0; i < in.rows; ++i) {
 		for (int j = 0; j < in.cols; ++j) {
 			Tensor b = Tensor(
-					x_sq.at<short>(i,j),
-					xy.at<short>(i,j),
-					xy.at<short>(i,j),
-					y_sq.at<short>(i,j)
+					x_sqr.at<double>(i,j),
+					xyr.at<double>(i,j),
+					xyr.at<double>(i,j),
+					y_sqr.at<double>(i,j)
+					);
+
+			Tensor c = Tensor(
+					x_sq.at<double>(i,j),
+					xy.at<double>(i,j),
+					xy.at<double>(i,j),
+					y_sq.at<double>(i,j)
 					);
 
 			/* Returns the eigenvectors as row vectors! */
@@ -81,13 +96,28 @@ void createAnisotropyTensor(
 
 			double l1 = 1.0;
 			double l2 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
+			//double C  = 1000;
+			//double l1 = gamma + (1.0 - gamma) * exp(-C / ((s1-s2)*(s1-s2)));
+			//double l2 = gamma;
 
 			Mat eval2 = eval.clone();
 			eval2.at<double>(0) = l1;
 			eval2.at<double>(1) = l2;
 			tensors(i, j) = Tensor(Mat(evec.t() * Mat::diag(eval2) * evec));
+			if (i == j)
+				cout << eval2 << endl;
 
-			edgedetect.at<float>(i, j) = s1;
+			h.at<double>(i, j) = fmod(atan2(evec.at<double>(1), evec.at<double>(0)) * 180.0 / M_PI + 180.0, 180.0);
+			s.at<double>(i, j) = 0;
+			v.at<double>(i, j) = 1.0/(1.0 + l2);
+
+			/* Returns the eigenvectors as row vectors! */
+			eigen(c, eval, evec);
+
+			s1 = eval.at<double>(0);
+			s2 = eval.at<double>(1);
+
+			edgedetect.at<double>(i, j) = s1;
 		}
 	}
 	normalize(edgedetect, edgedetect, 0, 255, NORM_MINMAX, CV_8U);
@@ -112,8 +142,26 @@ void createAnisotropyTensor(
 			line(structure, Point(j, i), Point2f(j, i) + 9 * s1 * p2, 0);
 		}
 	}
+
 	cout << "Writing structure to " << fstructure << endl;
 	imwrite(fstructure, structure);
+
+	Mat ho, so, vo;
+	normalize(h, ho, 0, 180, NORM_MINMAX, CV_8U);
+	normalize(s, so, 255, 255, NORM_MINMAX, CV_8U);
+	normalize(v, vo, 2, 255, NORM_MINMAX, CV_8U);
+
+	channels.push_back(ho);
+	channels.push_back(so);
+	channels.push_back(vo);
+	merge(channels, hsv);
+
+	//cout << hsv << endl;
+	Mat colortensor;
+	cvtColor(hsv, colortensor, CV_HSV2BGR);
+	//cout << boop << endl;
+
+	imwrite("tensor.png", colortensor);
 }
 
 void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma) {
