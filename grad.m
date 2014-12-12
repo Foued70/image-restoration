@@ -1,24 +1,18 @@
 im = imread('obk.pgm');
 
-col = 1;
-zmax = 1;
-imax = 30;
-for k = 1:100
-	i = 1;
-	printf("BOP\n");
-	while i < imax
-		for z = 1:zmax
-			if i >= imax
-				break;
-			end
-			if i > size(im)(2)
+imax = 40;
+
+idx = 1
+for i = 0:100
+	for j = 1:(floor((imax/(i+1))/2)*2)
+		for b = 1:i
+			if idx > size(im)(1)
 				break;
 			end
 			for c = 1:size(im)(1)
-				im(c,i) = mod(i, 2)*255;
+				im(c,idx) = mod(j, 2) * 255;
 			end
-			i = i + 1;
+			idx = idx + 1
 		end
 	end
-	zmax = zmax + 1;
 end
