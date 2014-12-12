@@ -19,8 +19,10 @@ void createAnisotropyTensor(
 		double sigma,
 		double rho,
 		double gamma,
+		char *fblur,
+		char *fedge,
 		char *fstructure,
-		char *fedge
+		char *fcolor
 		) {
 
 	int scale = 1;
@@ -33,6 +35,7 @@ void createAnisotropyTensor(
 	int pixels = rows * cols;
 
 	GaussianBlur(in, blurred, Size(0,0), sigma, 0, BORDER_REFLECT);
+	imwrite(fblur, blurred);
 
 	Mat grad_x, grad_y;
 	Mat kernel;
@@ -127,8 +130,9 @@ void createAnisotropyTensor(
 
 	Mat structure;
 	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
-	for (int i = 0; i < in.rows; i += 10) {
-		for (int j = 0; j < in.cols; j += 10) {
+	cvtColor(structure, structure, CV_GRAY2BGR);
+	for (int i = 0; i < in.rows; i += 15) {
+		for (int j = 0; j < in.cols; j += 15) {
 			Tensor b = tensors(i, j);
 
 			eigen(b, eval, evec);
@@ -138,8 +142,14 @@ void createAnisotropyTensor(
 
 			Point2f p1(evec.row(0));
 			Point2f p2(evec.row(1));
-			line(structure, Point(j, i), Point2f(j, i) + 9 * s2 * p1, 255);
-			line(structure, Point(j, i), Point2f(j, i) + 9 * s1 * p2, 0);
+			line(structure, Point(j, i), Point2f(j, i) + 10 * s2 * p1,
+					CV_RGB(255,0,0));
+			line(structure, Point(j, i), Point2f(j, i) + 10 * s1 * p2,
+					CV_RGB(0,0,0));
+			//ellipse(structure, Point(j, i), Size(10*s1, 10*s2),
+			//		atan2(p2.y, p2.x) * 180 / M_PI,
+			//		0, 360,
+			//		CV_RGB(0, 200, 200));
 		}
 	}
 
@@ -149,19 +159,17 @@ void createAnisotropyTensor(
 	Mat ho, so, vo;
 	normalize(h, ho, 0, 180, NORM_MINMAX, CV_8U);
 	normalize(s, so, 255, 255, NORM_MINMAX, CV_8U);
-	normalize(v, vo, 2, 255, NORM_MINMAX, CV_8U);
+	normalize(v, vo, 0, 255, NORM_MINMAX, CV_8U);
 
 	channels.push_back(ho);
 	channels.push_back(so);
 	channels.push_back(vo);
 	merge(channels, hsv);
 
-	//cout << hsv << endl;
 	Mat colortensor;
 	cvtColor(hsv, colortensor, CV_HSV2BGR);
-	//cout << boop << endl;
 
-	imwrite("tensor.png", colortensor);
+	imwrite(fcolor, colortensor);
 }
 
 void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma) {
@@ -263,7 +271,8 @@ int main(int argc, char *argv[])
 
 	Mat_<Tensor> tensors = Mat_<Tensor>::zeros(image.rows, image.cols);
 	createAnisotropyTensor(tensors, image, sigma, rho, gamma,
-			argv[optind + 1], argv[optind + 2]);
+			argv[optind + 1], argv[optind + 2],
+			argv[optind + 3], argv[optind + 4]);
 	//createUniformAnisotropyTensor(tensors, image, gamma);
 
 	/*
@@ -329,7 +338,7 @@ int main(int argc, char *argv[])
 	restoreAnisotropicTV(image, out, tensors, neigh, a, b, p);
 
 	cout << "Writing output to " << argv[optind + 3] << endl;
-	imwrite(argv[optind + 3], out);
+	imwrite(argv[optind + 5], out);
 
 	return 0;
 }
