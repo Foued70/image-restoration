@@ -43,6 +43,9 @@ methodnoise
 sobel
 colorwheel
 
+# Object files
+*.o
+
 # CMake
 CMakeCache.txt
 CMakeFiles/
