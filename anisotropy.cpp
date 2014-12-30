@@ -27,7 +27,6 @@ void createAnisotropyTensor(
 	int cols = in.cols;
 	int pixels = rows * cols;
 
-	blur.create(in.size(), CV_64F);
 	GaussianBlur(in, blur, Size(0,0), sigma, 0, BORDER_REFLECT);
 
 	Mat grad_x, grad_y;
@@ -35,7 +34,7 @@ void createAnisotropyTensor(
 
 	Point anchor = Point(-1, -1);
 
-       	kernel = Mat::zeros(1, 3, CV_64F);
+       	kernel = Mat::zeros(1, 3, CV_16S);
 
 	kernel.at<short>(0, 0) = -1;
 	kernel.at<short>(0, 1) = 0;
@@ -101,8 +100,6 @@ void createAnisotropyTensor(
 			eval2.at<double>(0) = l1;
 			eval2.at<double>(1) = l2;
 			tensors(i, j) = Tensor(Mat(evec.t() * Mat::diag(eval2) * evec));
-			if (i == j)
-				cout << eval2 << endl;
 
 			h.at<double>(i, j) = fmod(atan2(evec.at<double>(1), evec.at<double>(0)) * 180.0 / M_PI + 180.0, 180.0);
 			s.at<double>(i, j) = 0;
@@ -117,8 +114,9 @@ void createAnisotropyTensor(
 			edge.at<double>(i, j) = s1;
 		}
 	}
-	normalize(edge, edge, 0, 255, NORM_MINMAX, CV_8U);
+	//normalize(edge, edge, 0, 255, NORM_MINMAX, CV_8U);
 
+	structure.create(in.size(), CV_64F);
 	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
 	cvtColor(structure, structure, CV_GRAY2BGR);
 	for (int i = 0; i < in.rows; i += 15) {
@@ -153,7 +151,6 @@ void createAnisotropyTensor(
 	channels.push_back(vo);
 	merge(channels, hsv);
 
-	Mat colortensor;
 	cvtColor(hsv, color, CV_HSV2BGR);
 }
 

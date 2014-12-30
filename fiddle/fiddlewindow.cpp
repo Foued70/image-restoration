@@ -7,6 +7,8 @@
 
 #include "cvimagewidget.h"
 
+#include "../anisotropy.hpp"
+
 FiddleWindow::FiddleWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::FiddleWindow)
@@ -15,25 +17,38 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
 
     origWidget = new CVImageWidget();
     blurWidget = new CVImageWidget();
+    colorWidget = new CVImageWidget();
 
-    QSlider *slider = new QSlider(Qt::Horizontal);
-    slider->setFocusPolicy(Qt::StrongFocus);
-    slider->setTickPosition(QSlider::TicksBothSides);
-    slider->setTickInterval(10);
-    slider->setSingleStep(1);
+    QSlider *blurSlider = new QSlider(Qt::Horizontal);
+    blurSlider->setFocusPolicy(Qt::StrongFocus);
+    blurSlider->setTickPosition(QSlider::TicksBothSides);
+    blurSlider->setTickInterval(10);
+    blurSlider->setSingleStep(1);
+
+    QSlider *gammaSlider = new QSlider(Qt::Horizontal);
+    gammaSlider->setFocusPolicy(Qt::StrongFocus);
+    gammaSlider->setTickPosition(QSlider::TicksBothSides);
+    gammaSlider->setTickInterval(10);
+    gammaSlider->setSingleStep(1);
 
     QVBoxLayout *origLayout = new QVBoxLayout;
     origLayout->addWidget(origWidget);
 
     QVBoxLayout *blurLayout = new QVBoxLayout;
     blurLayout->addWidget(blurWidget);
-    blurLayout->addWidget(slider);
+    blurLayout->addWidget(blurSlider);
+
+    QVBoxLayout *colorLayout = new QVBoxLayout;
+    colorLayout->addWidget(colorWidget);
+    colorLayout->addWidget(gammaSlider);
 
     QHBoxLayout *mainLayout = new QHBoxLayout;
     mainLayout->addLayout(origLayout);
     mainLayout->addLayout(blurLayout);
+    mainLayout->addLayout(colorLayout);
     mainLayout->setStretchFactor(origLayout, 4);
     mainLayout->setStretchFactor(blurLayout, 4);
+    mainLayout->setStretchFactor(colorLayout, 4);
 
     QWidget *window = new QWidget;
     window->setLayout(mainLayout);
@@ -46,6 +61,9 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
 
     QObject::connect(this, SIGNAL(origChanged()),
                      this, SLOT(updateBlur()));
+
+    QObject::connect(this, SIGNAL(origChanged()),
+                     this, SLOT(updateColor()));
 
     this->setCentralWidget(window);
 }
@@ -83,9 +101,27 @@ void FiddleWindow::updateOrig()
 
 void FiddleWindow::updateBlur()
 {
-    cv::Mat image = cv::imread(fileName.toUtf8().constData(), true);
-    cv::GaussianBlur(image, image, cv::Size(0,0), 2, 0, cv::BORDER_REFLECT);
-    blurWidget->showImage(image);
+    cv::Mat image = cv::imread(fileName.toUtf8().constData(), CV_LOAD_IMAGE_GRAYSCALE);
+
+    cv::Mat_<Tensor> tensors = cv::Mat_<Tensor>::zeros(image.rows, image.cols);
+    cv::Mat blur, edge, structure, color;
+    createAnisotropyTensor(tensors, image, 5, 10, 10,
+		    blur, edge, structure, color);
+
+    blurWidget->showImage(blur);
+}
+
+void FiddleWindow::updateColor()
+{
+    cv::Mat image = cv::imread(fileName.toUtf8().constData(), CV_LOAD_IMAGE_GRAYSCALE);
+
+    cv::Mat_<Tensor> tensors = cv::Mat_<Tensor>::zeros(image.rows, image.cols);
+    cv::Mat blur, edge, structure, color;
+    createAnisotropyTensor(tensors, image, 5, 10, 100,
+		    blur, edge, structure, color);
+
+    cv::normalize(color, color, 0, 255, cv::NORM_MINMAX, CV_8U);
+    colorWidget->showImage(color);
 }
 
 FiddleWindow::~FiddleWindow()

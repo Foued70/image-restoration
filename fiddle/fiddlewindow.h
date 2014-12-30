@@ -16,6 +16,7 @@ class FiddleWindow : public QMainWindow
     QString fileName;
     CVImageWidget *origWidget;
     CVImageWidget *blurWidget;
+    CVImageWidget *colorWidget;
 
 public:
     explicit FiddleWindow(QWidget *parent = 0);
@@ -28,6 +29,7 @@ private slots:
     void openFile();
     void updateOrig();
     void updateBlur();
+    void updateColor();
 
 signals:
     void nameChanged();
