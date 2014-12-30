@@ -6,7 +6,7 @@
 #include "graph.hpp"
 #include "selectionrule.hpp"
 #include "neighborhood.hpp"
-#include "sobel.hpp"
+#include "anisotropy.hpp"
 
 //void createEdges();
 void createEdgesAnisotropic(

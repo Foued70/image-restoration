@@ -8,7 +8,7 @@
 #include "image.hpp"
 #include "neighborhood.hpp"
 #include "selectionrule.hpp"
-#include "sobel.hpp"
+#include "anisotropy.hpp"
 
 using namespace std;
 using namespace cv;
