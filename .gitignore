@@ -36,7 +36,7 @@ nosetests.xml
 .pydevproject
 
 # QT stuff
-gui/moc_*
+moc_*
 
 # Binaries
 image-restoration
@@ -45,6 +45,7 @@ imgdiff
 methodnoise
 sobel
 colorwheel
+fiddle/fiddle
 
 # Object files
 *.o
