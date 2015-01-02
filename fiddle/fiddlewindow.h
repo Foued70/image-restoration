@@ -2,6 +2,7 @@
 #define FIDDLEWINDOW_H
 
 #include <QMainWindow>
+#include <QDoubleSpinBox>
 #include "cvimagewidget.h"
 
 namespace Ui {
@@ -16,7 +17,15 @@ class FiddleWindow : public QMainWindow
     QString fileName;
     CVImageWidget *origWidget;
     CVImageWidget *blurWidget;
+    CVImageWidget *edgeWidget;
+    CVImageWidget *structureWidget;
     CVImageWidget *colorWidget;
+    CVImageWidget *restoredWidget;
+
+    QDoubleSpinBox *gammaSpinBox;
+    QDoubleSpinBox *rhoSpinBox;
+    QDoubleSpinBox *betaSpinBox;
+    QDoubleSpinBox *sigmaSpinBox;
 
 public:
     explicit FiddleWindow(QWidget *parent = 0);
@@ -28,8 +37,7 @@ public:
 private slots:
     void openFile();
     void updateOrig();
-    void updateBlur();
-    void updateColor();
+    void updateTensor();
 
 signals:
     void nameChanged();
