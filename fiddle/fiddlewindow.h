@@ -38,6 +38,7 @@ private slots:
     void openFile();
     void updateOrig();
     void updateTensor();
+    void restore();
 
 signals:
     void nameChanged();

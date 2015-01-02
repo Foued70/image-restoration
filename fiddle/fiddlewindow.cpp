@@ -1,7 +1,9 @@
+#include <QPushButton>
 #include <QGridLayout>
 #include <QLabel>
 #include <QFileDialog>
 #include <QDoubleSpinBox>
+#include <opencv2/opencv.hpp>
 
 #include "fiddlewindow.h"
 #include "ui_fiddlewindow.h"
@@ -9,6 +11,7 @@
 #include "cvimagewidget.h"
 
 #include "../anisotropy.hpp"
+#include "../image.hpp"
 
 FiddleWindow::FiddleWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -73,6 +76,8 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
     QLabel *betaLabel = new QLabel();
     betaLabel->setText("beta");
 
+    QPushButton *restoreButton = new QPushButton(tr("Restore!"));
+
     paramLayout->addWidget(sigmaLabel, 0, 0);
     paramLayout->addWidget(sigmaSpinBox, 0, 1);
     paramLayout->addWidget(rhoLabel, 1, 0);
@@ -81,6 +86,7 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
     paramLayout->addWidget(gammaSpinBox, 2, 1);
     paramLayout->addWidget(betaLabel, 3, 0);
     paramLayout->addWidget(betaSpinBox, 3, 1);
+    paramLayout->addWidget(restoreButton, 4, 0);
 
     gridLayout->addLayout(paramLayout, 0, 0, 3, 1);
 
@@ -104,6 +110,9 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
 		    this, SLOT(updateTensor()));
     QObject::connect(betaSpinBox, SIGNAL(valueChanged(double)),
 		    this, SLOT(updateTensor()));
+
+    QObject::connect(restoreButton, SIGNAL(clicked()),
+		    this, SLOT(restore()));
 
     this->setCentralWidget(window);
 }
@@ -157,6 +166,63 @@ void FiddleWindow::updateTensor()
     edgeWidget->showImage(edge);
     structureWidget->showImage(structure);
     colorWidget->showImage(color);
+}
+
+void FiddleWindow::restore()
+{
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    cv::Mat image = cv::imread(fileName.toUtf8().constData(), CV_LOAD_IMAGE_GRAYSCALE);
+
+    cv::Mat_<Tensor> tensors = cv::Mat_<Tensor>::zeros(image.rows, image.cols);
+    cv::Mat blur, edge, structure, color;
+    createAnisotropyTensor(tensors, image, sigmaSpinBox->value(),
+		    rhoSpinBox->value(), gammaSpinBox->value(), blur, edge,
+		    structure, color);
+
+    Neighborhood neigh;
+    int neighbors = 16;
+    if (neighbors >= 4) {
+	    neigh.add( 1, 0, 1.0);
+	    neigh.add( 0, 1, 1.0);
+	    neigh.add(-1, 0, 1.0);
+	    neigh.add( 0,-1, 1.0);
+    }
+
+    if (neighbors >= 8) {
+	    neigh.add( 1, 1, 1.0);
+	    neigh.add(-1, 1, 1.0);
+	    neigh.add( 1,-1, 1.0);
+	    neigh.add(-1,-1, 1.0);
+    }
+
+    if (neighbors >= 16) {
+	    neigh.add8(1, 2, 1.0);
+    }
+
+    if (neighbors >= 32) {
+	    neigh.add8(3, 1, 1.0);
+	    neigh.add8(3, 2, 1.0);
+    }
+
+    if (neighbors >= 48) {
+	    neigh.add8(1, 4, 1.0);
+	    neigh.add8(3, 4, 1.0);
+    }
+
+    if (neighbors >= 72) {
+	    neigh.add8(1, 5, 1.0);
+	    neigh.add8(2, 5, 1.0);
+	    neigh.add8(3, 5, 1.0);
+    }
+
+    neigh.setupAngles();
+
+    cv::Mat out = image.clone();
+    restoreAnisotropicTV(image, out, tensors, neigh, 100, betaSpinBox->value(), 2);
+    restoredWidget->showImage(out);
+
+    QApplication::restoreOverrideCursor();
 }
 
 FiddleWindow::~FiddleWindow()
