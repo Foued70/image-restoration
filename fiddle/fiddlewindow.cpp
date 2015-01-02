@@ -1,4 +1,5 @@
 #include <QPushButton>
+#include <QToolTip>
 #include <QGridLayout>
 #include <QLabel>
 #include <QFileDialog>
@@ -25,6 +26,13 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
     structureWidget = new CVImageWidget();
     colorWidget = new CVImageWidget();
     restoredWidget = new CVImageWidget();
+
+    origWidget->setToolTip(tr("Original image."));
+    blurWidget->setToolTip(tr("Blurred with parameter sigma."));
+    edgeWidget->setToolTip(tr("Edge detector before smoothing with rho.\n\nNote that this image has been normalized to the range 0-255."));
+    structureWidget->setToolTip(tr("Blurred image with some tensors overlayed"));
+    colorWidget->setToolTip(tr("Colorized visualization of the tensors.\n\nNote that in this image the colors have been normalized to the range 0-255."));
+    restoredWidget->setToolTip(tr("Restored image."));
 
     sigmaSpinBox = new QDoubleSpinBox();
     sigmaSpinBox->setDecimals(2);
