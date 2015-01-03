@@ -1,6 +1,8 @@
 #include <QPushButton>
 #include <QToolTip>
 #include <QGridLayout>
+#include <QGroupBox>
+#include <QRadioButton>
 #include <QLabel>
 #include <QFileDialog>
 #include <QDoubleSpinBox>
@@ -29,23 +31,31 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
 
     origWidget->setToolTip(tr("Original image."));
     blurWidget->setToolTip(tr("Blurred with parameter sigma."));
-    edgeWidget->setToolTip(tr("Edge detector before smoothing with rho.\n\nNote that this image has been normalized to the range 0-255."));
+    edgeWidget->setToolTip(tr("Edge detector before smoothing with rho.\n\n"
+			    "Note that this image has been\n"
+			    "normalized to the range 0-255."));
     structureWidget->setToolTip(tr("Blurred image with some tensors overlayed"));
-    colorWidget->setToolTip(tr("Colorized visualization of the tensors.\n\nNote that in this image the colors have been normalized to the range 0-255."));
+    colorWidget->setToolTip(tr("Colorized visualization of the tensors.\n\n"
+			    "Note that in this image the colors have been\n"
+			    "normalized to the range 0-255."));
     restoredWidget->setToolTip(tr("Restored image."));
 
     sigmaSpinBox = new QDoubleSpinBox();
     sigmaSpinBox->setDecimals(2);
     sigmaSpinBox->setRange(0.01, 1000);
+    sigmaSpinBox->setValue(2);
     rhoSpinBox = new QDoubleSpinBox();
     rhoSpinBox->setDecimals(2);
     rhoSpinBox->setRange(0.01, 1000);
+    rhoSpinBox->setValue(4);
     gammaSpinBox = new QDoubleSpinBox();
     gammaSpinBox->setDecimals(2);
     gammaSpinBox->setRange(0.01, 2000000000);
+    gammaSpinBox->setValue(100);
     betaSpinBox = new QDoubleSpinBox();
     betaSpinBox->setDecimals(0);
     betaSpinBox->setRange(1, 2000000000);
+    betaSpinBox->setValue(1000);
 
     QGridLayout *gridLayout = new QGridLayout;
     gridLayout->addWidget(origWidget, 0, 2);
@@ -75,16 +85,38 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
 
     QGridLayout *paramLayout = new QGridLayout();
 
-    QLabel *rhoLabel = new QLabel();
-    rhoLabel->setText("rho");
     QLabel *sigmaLabel = new QLabel();
-    sigmaLabel->setText("sigma");
+    sigmaLabel->setText("Sigma");
+    QLabel *rhoLabel = new QLabel();
+    rhoLabel->setText("Rho");
     QLabel *gammaLabel = new QLabel();
-    gammaLabel->setText("gamma");
+    gammaLabel->setText("Gamma");
     QLabel *betaLabel = new QLabel();
-    betaLabel->setText("beta");
+    betaLabel->setText("Beta");
 
     QPushButton *restoreButton = new QPushButton(tr("Restore!"));
+
+    QGroupBox *neighBox = new QGroupBox(tr("Neighborhood size"));
+
+    n4 = new QRadioButton(tr("4"));
+    n8 = new QRadioButton(tr("8"));
+    n16 = new QRadioButton(tr("16"));
+    n32 = new QRadioButton(tr("32"));
+    n48 = new QRadioButton(tr("48"));
+    n72 = new QRadioButton(tr("72"));
+
+    n16->setChecked(true);
+
+    QVBoxLayout *radioBox = new QVBoxLayout();
+
+    radioBox->addWidget(n4);
+    radioBox->addWidget(n8);
+    radioBox->addWidget(n16);
+    radioBox->addWidget(n32);
+    radioBox->addWidget(n48);
+    radioBox->addWidget(n72);
+
+    neighBox->setLayout(radioBox);
 
     paramLayout->addWidget(sigmaLabel, 0, 0);
     paramLayout->addWidget(sigmaSpinBox, 0, 1);
@@ -94,7 +126,9 @@ FiddleWindow::FiddleWindow(QWidget *parent) :
     paramLayout->addWidget(gammaSpinBox, 2, 1);
     paramLayout->addWidget(betaLabel, 3, 0);
     paramLayout->addWidget(betaSpinBox, 3, 1);
-    paramLayout->addWidget(restoreButton, 4, 0);
+    paramLayout->addWidget(neighBox, 4, 0, 1, 2);
+    paramLayout->addWidget(restoreButton, 5, 0);
+    paramLayout->setRowStretch(6, 4);
 
     gridLayout->addLayout(paramLayout, 0, 0, 3, 1);
 
@@ -190,6 +224,20 @@ void FiddleWindow::restore()
 
     Neighborhood neigh;
     int neighbors = 16;
+
+    if (n4->isChecked())
+	    neighbors = 4;
+    else if (n8->isChecked())
+	    neighbors = 8;
+    else if (n16->isChecked())
+	    neighbors = 16;
+    else if (n32->isChecked())
+	    neighbors = 32;
+    else if (n48->isChecked())
+	    neighbors = 48;
+    else if (n72->isChecked())
+	    neighbors = 72;
+
     if (neighbors >= 4) {
 	    neigh.add( 1, 0, 1.0);
 	    neigh.add( 0, 1, 1.0);

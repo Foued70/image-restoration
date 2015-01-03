@@ -2,6 +2,7 @@
 #define FIDDLEWINDOW_H
 
 #include <QMainWindow>
+#include <QRadioButton>
 #include <QDoubleSpinBox>
 #include "cvimagewidget.h"
 
@@ -26,6 +27,8 @@ class FiddleWindow : public QMainWindow
     QDoubleSpinBox *rhoSpinBox;
     QDoubleSpinBox *betaSpinBox;
     QDoubleSpinBox *sigmaSpinBox;
+
+    QRadioButton *n4, *n8, *n16, *n32, *n48, *n72;
 
 public:
     explicit FiddleWindow(QWidget *parent = 0);
