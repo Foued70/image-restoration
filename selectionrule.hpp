@@ -14,11 +14,11 @@ class EmptyQueueException : public std::exception {
 
 class SelectionRule {
 
-private:
-	std::vector<char> active;
-
 protected:
 	int N;
+
+private:
+	std::vector<char> active;
 
 public:
 	virtual int next(void) = 0;

@@ -156,11 +156,11 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 		}
 	}
 
-	for (int i = 0; i < s_caps.size(); ++i) {
+	for (size_t i = 0; i < s_caps.size(); ++i) {
 		network.changeCapacity(network.getSource(), i, alpha * s_caps[i]);
 	}
 
-	for (int i = 0; i < t_caps.size(); ++i) {
+	for (size_t i = 0; i < t_caps.size(); ++i) {
 		network.changeCapacity(i, network.getSink(), alpha * t_caps[i]);
 	}
 }

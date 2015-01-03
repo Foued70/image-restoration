@@ -26,9 +26,9 @@ private:
 	std::vector<std::vector<Edge> > G;
 	std::vector<int> excess;
 	std::vector<int> height;
-	std::vector<int> count;
 	std::vector<int> s_index;
 	std::vector<int> t_index;
+	std::vector<int> count;
 	SelectionRule& rule;
 
 public:
@@ -36,16 +36,16 @@ public:
 
 	FlowGraph(int N, int source, int sink, SelectionRule& rule) :
 		N(N),
+		source(source),
+		sink(sink),
 		G(N),
 		excess(N),
 		height(N),
-		cut(N),
 		s_index(N),
 		t_index(N),
-		source(source),
-		sink(sink),
 		count(N+1),
-       		rule(rule) {}
+       		rule(rule),
+		cut(N) {}
 
 	int getSource() { return source; }
 	int getSink() { return sink; }

@@ -3,6 +3,7 @@
 #include <stack>
 #include <vector>
 #include <cassert>
+#include <cstdlib>
 
 #include "graph.hpp"
 
@@ -37,12 +38,14 @@ void FlowGraph::addDoubleEdge(int from, int to, int cap) {
  */
 void FlowGraph::changeCapacity(int from, int to, int cap) {
 	int index;
-	if (from == source)
+	if (from == source) {
 		index = s_index[to];
-	else if (to == sink)
+	} else if (to == sink) {
 		index = t_index[from];
-	else
-		assert(0);
+	} else {
+		index = 0;
+		exit(1);
+	}
 
 	int diff = G[from][index].flow - cap;
 
@@ -59,8 +62,8 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 
 /* Reset all flow and excess. */
 void FlowGraph::resetFlow() {
-	for (int i = 0; i < G.size(); ++i) {
-		for (int j = 0; j < G[i].size(); ++j) {
+	for (size_t i = 0; i < G.size(); ++i) {
+		for (size_t j = 0; j < G[i].size(); ++j) {
 			G[i][j].flow = 0;
 		}
 	}
@@ -89,7 +92,7 @@ void FlowGraph::relabel(int u) {
 	count[height[u]]--;
 	height[u] = 2*N;
 
-	for (int i = 0; i < G[u].size(); ++i) {
+	for (size_t i = 0; i < G[u].size(); ++i) {
 		if (G[u][i].cap > G[u][i].flow) {
 			height[u] = min(height[u], height[G[u][i].to] + 1);
 		}
@@ -106,8 +109,7 @@ void FlowGraph::relabel(int u) {
 
 /* Relabel all vertices over the gap h to label N. */
 void FlowGraph::gap(int h) {
-	int c = 0;
-	for (int i = 0; i < G.size(); ++i) {
+	for (size_t i = 0; i < G.size(); ++i) {
 		if (height[i] < h) continue;
 		if (height[i] >= N) continue;
 
@@ -122,7 +124,7 @@ void FlowGraph::gap(int h) {
 
 /* Discharge a vertex. */
 void FlowGraph::discharge(int u) {
-	int i;
+	size_t i;
 	for (i = 0; i < G[u].size() && excess[u] > 0; ++i) {
 		if (G[u][i].cap > G[u][i].flow
 				&& height[u] == height[G[u][i].to] + 1) {
@@ -146,7 +148,7 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	rule.activate(source);
 	rule.activate(sink);
 
-	for (int i = 0; i < G[source].size(); ++i) {
+	for (size_t i = 0; i < G[source].size(); ++i) {
 		excess[source] = G[source][i].cap;
 		push(G[source][i]);
 	}
@@ -161,13 +163,13 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	}
 
 	/* Output the cut based on vertex heights. */
-	for (int i = 0; i < cut.size(); ++i) {
+	for (size_t i = 0; i < cut.size(); ++i) {
 		cut[i] = height[i] >= N;
 	}
 }
 
 bool FlowGraph::checkExcess(void) {
-	for (int i = 0; i < excess.size(); ++i) {
+	for (size_t i = 0; i < excess.size(); ++i) {
 		if (excess[i] < 0) {
 			return false;
 		}
@@ -177,8 +179,8 @@ bool FlowGraph::checkExcess(void) {
 }
 
 bool FlowGraph::checkCapacity(void) {
-	for (int i = 0; i < G.size(); ++i) {
-		for (int j = 0; j < G[i].size(); ++j) {
+	for (size_t i = 0; i < G.size(); ++i) {
+		for (size_t j = 0; j < G[i].size(); ++j) {
 			if (G[i][j].flow > G[i][j].cap) return false;
 		}
 	}
@@ -187,8 +189,8 @@ bool FlowGraph::checkCapacity(void) {
 }
 
 bool FlowGraph::checkLabels(void) {
-	for (int i = 0; i < G.size(); ++i) {
-		for (int j = 0; j < G[i].size(); ++j) {
+	for (size_t i = 0; i < G.size(); ++i) {
+		for (size_t j = 0; j < G[i].size(); ++j) {
 			if (G[i][j].flow < G[i][j].cap) {
 				if (height[i] > height[G[i][j].to] + 1) {
 					return false;
@@ -201,10 +203,10 @@ bool FlowGraph::checkLabels(void) {
 }
 
 bool FlowGraph::checkCount(void) {
-	for (int i = 0; i < count.size(); ++i) {
+	for (size_t i = 0; i < count.size(); ++i) {
 		int c = 0;
-		for (int j = 0; j < height.size(); ++j) {
-			if (height[j] == i) c++;
+		for (size_t j = 0; j < height.size(); ++j) {
+			if ((unsigned)height[j] == i) c++;
 		}
 		if (c != count[i]) {
 			cout << "c = " << c << ", count[" << i << "] = ";
@@ -218,7 +220,7 @@ bool FlowGraph::checkCount(void) {
 
 int FlowGraph::outFlow(int source) {
 	int c = 0;
-	for (int i = 0; i < G[source].size(); ++i) {
+	for (size_t i = 0; i < G[source].size(); ++i) {
 		c += G[source][i].flow;
 	}
 	return c;
@@ -226,7 +228,7 @@ int FlowGraph::outFlow(int source) {
 
 int FlowGraph::inFlow(int sink) {
 	int c = 0;
-	for (int i = 0; i < G[sink].size(); ++i) {
+	for (size_t i = 0; i < G[sink].size(); ++i) {
 		c += G[sink][i].flow;
 	}
 	return c;

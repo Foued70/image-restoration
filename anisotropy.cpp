@@ -18,14 +18,7 @@ void createAnisotropyTensor(
 		cv::Mat& color
 		) {
 
-	int scale = 1;
-	int delta = 0;
-
 	Mat grad;
-
-	int rows = in.rows;
-	int cols = in.cols;
-	int pixels = rows * cols;
 
 	GaussianBlur(in, blur, Size(0,0), sigma, 0, BORDER_REFLECT);
 
@@ -155,9 +148,6 @@ void createAnisotropyTensor(
 }
 
 void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma) {
-	int rows = in.rows;
-	int cols = in.cols;
-
 	Mat evec, eval;
 	for (int i = 0; i < in.rows; ++i) {
 		for (int j = 0; j < in.cols; ++j) {
@@ -165,9 +155,6 @@ void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma)
 
 			/* Returns the eigenvectors as row vectors! */
 			eigen(b, eval, evec);
-
-			double s1 = eval.at<double>(0);
-			double s2 = eval.at<double>(1);
 
 			double l1 = 1.0 / gamma;
 			double l2 = 1.0;
