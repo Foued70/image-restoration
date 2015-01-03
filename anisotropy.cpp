@@ -114,7 +114,7 @@ void createAnisotropyTensor(
 			edge.at<double>(i, j) = s1;
 		}
 	}
-	//normalize(edge, edge, 0, 255, NORM_MINMAX, CV_8U);
+	normalize(edge, edge, 0, 255, NORM_MINMAX, CV_8U);
 
 	structure.create(in.size(), CV_64F);
 	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
@@ -142,7 +142,7 @@ void createAnisotropyTensor(
 	}
 
 	Mat ho, so, vo;
-	normalize(h, ho, 0, 180, NORM_MINMAX, CV_8U);
+	h.convertTo(ho, CV_8U);
 	normalize(s, so, 255, 255, NORM_MINMAX, CV_8U);
 	normalize(v, vo, 0, 255, NORM_MINMAX, CV_8U);
 
