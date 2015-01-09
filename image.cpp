@@ -93,6 +93,11 @@ void createEdgesAnisotropic(
 
 			for (it = neigh.begin(); it != neigh.end(); ++it) {
 
+				if (it->x < 0)
+					continue;
+				if (it->x == 0 && it->y > 0)
+					continue;
+
 				int x = j + it->x;
 				int y = i + it->y;
 				
