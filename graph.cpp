@@ -52,6 +52,27 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 
 	G[from][index].cap = cap;
 
+	//if (to == sink) {
+	//	int diff_s = G[source][s_index[from]].cap - G[source][s_index[from]].flow;
+	//	int diff_t = G[from][index].cap - G[from][index].flow;
+
+	//	int m = min(diff_s, diff_t);
+	//	push(G[source][s_index[from]], m);
+	//	push(G[from][index], m);
+	//	//cout << "Updatemax: " << m << endl;
+	//}
+
+	if (G[from][index].flow != G[from][index].cap) {
+		if (!active[from]) {
+			bkq.push(from);
+			active[from] = 1;
+		}
+		if (!active[to]) {
+			bkq.push(to);
+			active[to] = 1;
+		}
+	}
+
 	if (diff > 0) {
 		excess[from] += diff;
 		excess[to] -= diff;
@@ -68,6 +89,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 			parent[from] = NULL;
 			orphans.push(from);
 		}
+		//cout << "BEEP: " << from << " -> " << to << ": " << cap << endl;
 	}
 }
 
@@ -186,34 +208,37 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 }
 
 void FlowGraph::pushDirect(int source, int sink) {
-
 }
 
 /*
- * Send as much flow as possible through paths of length
- * at most 2, and set up the status of the vertices.
+ * Initialize.
  */
 void FlowGraph::initBK(int source, int sink) {
-	fill(active.begin(), active.end(), 0);
-	fill(color.begin(), color.end(), 0);
-	fill(parent.begin(), parent.end(), (Edge*)NULL);
+	//fill(active.begin(), active.end(), 0);
+	//fill(color.begin(), color.end(), 0);
+	//fill(parent.begin(), parent.end(), (Edge*)NULL);
+	lastGrowVertex = -1;
 
-	std::queue<int> empty1;
-	std::swap(orphans, empty1);
+	static bool first = true;
 
-	std::queue<int> empty2;
-	std::swap(bkq, empty2);
+	//std::queue<int> empty1;
+	//std::swap(orphans, empty1);
 
-	resetFlow();
-	//adopt();
+	//std::queue<int> empty2;
+	//std::swap(bkq, empty2);
 
-	active[source] = 1;
-	active[sink]   = 1;
-	color[source]  = 1;
-	color[sink]    = 2;
+	//resetFlow();
 
-	bkq.push(source);
-	bkq.push(sink);
+	if (first) {
+		color[source]  = 1;
+		color[sink]    = 2;
+		active[source] = 1;
+		active[sink] = 1;
+		bkq.push(source);
+		bkq.push(sink);
+		first = false;
+	}
+	adopt();
 }
 
 int FlowGraph::treeCap(int p, int i, int col) {
@@ -236,15 +261,24 @@ int FlowGraph::treeCap(Edge& e, int col) {
 }
 
 Edge *FlowGraph::grow() {
+	static size_t i = 0;
+
 	while (!bkq.empty()) {
 		int p = bkq.front();
 		if (!active[p]) {
 			bkq.pop();
 			continue;
 		}
+		//cout << "Growing from (" << G[p].size() << "): " << p << endl;
 
-		for (int i = 0; i < G[p].size(); ++i) {
+		if (lastGrowVertex != p)
+			i = 0;
+
+		lastGrowVertex = p;
+
+		for (; i < G[p].size(); ++i) {
 			int q = G[p][i].to;
+
 			if (treeCap(G[p][i], color[p]) <= 0)
 				continue;
 
@@ -260,7 +294,7 @@ Edge *FlowGraph::grow() {
 					assert(treeOrigin(p) == sink);
 				} else {
 					cout << color[p] << endl;
-					assert(0);
+					exit(1);
 				}
 
 				active[q] = 1;
@@ -268,6 +302,7 @@ Edge *FlowGraph::grow() {
 			}
 			else if (color[q] != color[p]) {
 
+				//cout << "The trees meet! " << p << " -> " << q << endl;
 				if (color[p] == 1) {
 					return &G[p][i];
 				}
@@ -275,12 +310,14 @@ Edge *FlowGraph::grow() {
 					return &G[q][G[p][i].index];
 				}
 				else {
-					assert(0);
+					exit(1);
 				}
-				//cout << "The trees meet! " << u << " -> " << v << endl;
 
 				return NULL;
 			}
+
+			starti[p]++;
+			if (starti[p] >= G[p].size()) starti[p] = 0;
 		}
 
 		bkq.pop();
@@ -314,6 +351,7 @@ void FlowGraph::augment(Edge* e) {
 
 	cur = e;
 	bool back = true;
+	int len = 0;
 	while (cur != NULL) {
 		/* Check for saturation */
 		if (cur->cap - cur->flow == m) {
@@ -335,6 +373,7 @@ void FlowGraph::augment(Edge* e) {
 				}
 			}
 		}
+		len++;
 		push(*cur, m);
 
 		/*
@@ -351,6 +390,7 @@ void FlowGraph::augment(Edge* e) {
 			cur = parent[cur->to];
 		}
 	}
+	//cout << "Len: " << len << endl;
 }
 
 int FlowGraph::treeOrigin(int u) {
@@ -376,7 +416,7 @@ void FlowGraph::adopt() {
 		assert(color[u] != 0);
 
 		bool found = false;
-		for (int i = 0; i < G[u].size() && !found; ++i) {
+		for (size_t i = 0; i < G[u].size() && !found; ++i) {
 			int v = G[u][i].to;
 
 			if (color[u] != color[v])
@@ -405,7 +445,7 @@ void FlowGraph::adopt() {
 		}
 
 		if (!found) {
-			for (int i = 0; i < G[u].size(); ++i) {
+			for (size_t i = 0; i < G[u].size(); ++i) {
 				int v = G[u][i].to;
 
 				if (color[u] != color[v])
@@ -435,13 +475,24 @@ void FlowGraph::adopt() {
 	}
 }
 
+void printQ(queue<int> q) {
+	//while (!q.empty()) {
+	//	cout << q.front() << ", ";
+	//	q.pop();
+	//}
+	//cout << endl;
+	cout << "QUEUE LEN: " << q.size() << endl;
+}
+
 void FlowGraph::minCutBK(int source, int sink) {
 	initBK(source, sink);
 	pushDirect(source, sink);
 
+	cout << "Num active: " << numActive() << endl;
 	while (true) {
 		Edge *e;
 		//cout << "Growing path" << endl;
+		//printQ(bkq);
 		e = grow();
 
 		if (e == NULL) {
@@ -455,12 +506,17 @@ void FlowGraph::minCutBK(int source, int sink) {
 		adopt();
 	}
 
-	for (int i = 0; i < cut.size(); ++i) {
+	int size1 = 0, size2 = 0;
+	for (size_t i = 0; i < cut.size(); ++i) {
 		if (color[i] == 0) cout << "boop" << endl;
-		cut[i] = color[i] == 1;
+		else if (color[i] == 1) size1++;
+		else if (color[i] == 2) size2++;
+		cut[i] = color[i] == 2;
 	}
 	assert(checkCapacity());
 	assert(checkActive());
+	cout << "Num active: " << numActive() << endl;
+	//cout << "size1: " << size1 << ", size2: " << size2 << endl;
 }
 
 bool FlowGraph::checkExcess(void) {
@@ -474,13 +530,26 @@ bool FlowGraph::checkExcess(void) {
 }
 
 bool FlowGraph::checkActive(void) {
-	for (int i = 0; i < active.size(); ++i) {
+	bool ret = true;
+	for (size_t i = 0; i < active.size(); ++i) {
 		if (active[i] != 0) {
-			return false;
+			cout << i << " is active." << endl;
+			ret = false;
 		}
 	}
 
-	return true;
+	return ret;
+}
+
+int FlowGraph::numActive(void) {
+	int num = 0;
+	for (size_t i = 0; i < active.size(); ++i) {
+		if (active[i] != 0) {
+			num++;
+		}
+	}
+
+	return num;
 }
 
 bool FlowGraph::checkCapacity(void) {

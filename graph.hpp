@@ -35,9 +35,13 @@ private:
 	/* BK stuff */
 	std::vector<int> active;
 	std::vector<int> color; // 0 = free, 1 = source, 2 = sink
+	std::vector<size_t> starti;
 	std::vector<Edge*> parent;
 	std::queue<int> bkq;
 	std::queue<int> orphans;
+
+	int lastGrowVertex;
+	size_t growIndex;
 public:
 	std::vector<char> cut;
 
@@ -54,7 +58,9 @@ public:
        		rule(rule),
 		active(N),
 		color(N),
+		starti(N),
 		parent(N),
+		lastGrowVertex(-1),
 		cut(N) {}
 
 	int getSource() { return source; }
@@ -85,6 +91,7 @@ public:
 	int outFlow(int source);
 	int inFlow(int sink);
 
+	int numActive(void);
 	bool checkExcess(void);
 	bool checkActive(void);
 	bool checkCapacity(void);
