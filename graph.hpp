@@ -20,6 +20,8 @@ public:
 		from(f), to(t), cap(c), flow(0), index(i) {}
 };
 
+enum Color { FREE = 0, SOURCE, SINK };
+
 class FlowGraph {
 private:
 	int N;
@@ -34,8 +36,7 @@ private:
 
 	/* BK stuff */
 	std::vector<int> active;
-	std::vector<int> color; // 0 = free, 1 = source, 2 = sink
-	std::vector<size_t> starti;
+	std::vector<Color> color;
 	std::vector<Edge*> parent;
 	std::queue<int> bkq;
 	std::queue<int> orphans;
@@ -58,21 +59,20 @@ public:
 		rule(rule),
 		active(N),
 		color(N),
-		starti(N),
 		parent(N),
 		lastGrowVertex(-1),
 		cut(N) {
 
-		color[source]  = 1;
-		color[sink]    = 2;
+		color[source]  = SOURCE;
+		color[sink]    = SINK;
 		active[source] = 1;
 		active[sink]   = 1;
 		bkq.push(source);
 		bkq.push(sink);
 	}
 
-	int getSource() { return source; }
-	int getSink() { return sink; }
+	int getSource() const { return source; }
+	int getSink() const { return sink; }
 	void addEdge(int from, int to, int cap);
 	void addDoubleEdge(int from, int to, int cap);
 	void changeCapacity(int from, int index, int cap);
@@ -86,12 +86,10 @@ public:
 	void discharge(int u);
 	void minCutPushRelabel(int source, int sink);
 
-	void pushDirect(int source, int sink);
 	void minCutBK(int source, int sink);
-	void augment(Edge *e);
-	int treeCap(int p, int i, int col);
-	int treeCap(Edge& e, int col);
-	int treeOrigin(int u);
+	int augment(Edge *e);
+	int treeCap(const Edge& e, Color col) const;
+	int treeOrigin(int u) const;
 	void adopt();
 	Edge *grow();
 

@@ -44,34 +44,35 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	} else if (to == sink) {
 		index = t_index[from];
 	} else {
-		index = 0;
 		exit(1);
 	}
-
-	int rs = G[source][s_index[from]].cap - G[source][s_index[from]].flow;
-	int rt = cap - G[from][index].flow;
 
 	G[from][index].cap = cap;
 
 	if (to != sink)
 		return;
 
+	int si = s_index[from];
+	int ti = t_index[from];
+
+	int rs = G[source][si].cap - G[source][si].flow;
+	int rt = cap - G[from][ti].flow;
+
 	if (rs > 0 && rt > 0) {
 		int m = min(rs, rt);
-		push(G[source][s_index[from]], m);
-		push(G[from][index], m);
+		push(G[source][si], m);
+		push(G[from][ti], m);
 
-		if (m == rs && parent[to] == &G[source][s_index[from]]) {
+		if (m == rs && parent[to] == &G[from][G[source][si].index]) {
 			parent[to] = NULL;
 			orphans.push(to);
-		}
-		if (m == rt && parent[to] == &G[from][index]) {
+		} else if (m == rt && parent[to] == &G[from][ti]) {
 			parent[to] = NULL;
 			orphans.push(to);
 		}
 	}
 
-	if (G[from][index].flow != G[from][index].cap) {
+	if (G[from][ti].flow != G[from][ti].cap) {
 		if (!active[from]) {
 			bkq.push(from);
 			active[from] = 1;
@@ -81,18 +82,6 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 			active[to] = 1;
 		}
 	}
-
-	//if (cap == 0) {
-	//	if (color[from] == 1 && color[to] == 1) {
-	//		parent[to] = NULL;
-	//		orphans.push(to);
-	//	}
-	//	if (color[from] == 2 && color[to] == 2) {
-	//		parent[from] = NULL;
-	//		orphans.push(from);
-	//	}
-	//	cout << "SHOULDN'T HAPPEN" << endl;
-	//}
 }
 
 /* Reset all flow and excess. */
@@ -209,20 +198,10 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	}
 }
 
-int FlowGraph::treeCap(int p, int i, int col) {
-	if (col == 1)
-		return G[p][i].cap - G[p][i].flow;
-	else if (col == 2)
-		return G[G[p][i].to][G[p][i].index].cap
-			- G[G[p][i].to][G[p][i].index].flow;
-	else
-		return 0;
-}
-
-int FlowGraph::treeCap(Edge& e, int col) {
-	if (col == 1)
+int FlowGraph::treeCap(const Edge& e, Color col) const {
+	if (col == SOURCE)
 		return e.cap - e.flow;
-	else if (col == 2)
+	else if (col == SINK)
 		return G[e.to][e.index].cap - G[e.to][e.index].flow;
 	else
 		return 0;
@@ -245,20 +224,24 @@ Edge *FlowGraph::grow() {
 		lastGrowVertex = p;
 
 		for (; i < G[p].size(); ++i) {
-			int q = G[p][i].to;
+			Edge *e = &G[p][i];
+			int q = e->to;
 
-			if (treeCap(G[p][i], color[p]) <= 0)
+			if (color[p] == color[q])
 				continue;
 
-			if (color[q] == 0) {
+			if (treeCap(*e, color[p]) <= 0)
+				continue;
+
+			if (color[q] == FREE) {
 				color[q] = color[p];
 
 				//cout << "Parent of " << q << " is now " << p << endl;
-				if (color[p] == 1) {
-					parent[q] = &G[p][i];
+				if (color[p] == SOURCE) {
+					parent[q] = e;
 					assert(treeOrigin(p) == source);
-				} else if (color[p] == 2) {
-					parent[q] = &G[q][G[p][i].index];
+				} else if (color[p] == SINK) {
+					parent[q] = &G[q][e->index];
 					assert(treeOrigin(p) == sink);
 				} else {
 					cout << color[p] << endl;
@@ -271,11 +254,11 @@ Edge *FlowGraph::grow() {
 			else if (color[q] != color[p]) {
 
 				//cout << "The trees meet! " << p << " -> " << q << endl;
-				if (color[p] == 1) {
-					return &G[p][i];
+				if (color[p] == SOURCE) {
+					return e;
 				}
-				else if (color[p] == 2) {
-					return &G[q][G[p][i].index];
+				else if (color[p] == SINK) {
+					return &G[q][e->index];
 				}
 				else {
 					exit(1);
@@ -283,9 +266,6 @@ Edge *FlowGraph::grow() {
 
 				return NULL;
 			}
-
-			starti[p]++;
-			if (starti[p] >= G[p].size()) starti[p] = 0;
 		}
 
 		bkq.pop();
@@ -296,7 +276,7 @@ Edge *FlowGraph::grow() {
 	return NULL;
 }
 
-void FlowGraph::augment(Edge* e) {
+int FlowGraph::augment(Edge* e) {
 	int m = e->cap - e->flow;
 
 	Edge *cur = e;
@@ -328,13 +308,13 @@ void FlowGraph::augment(Edge* e) {
 
 			//cout << "Saturation at " << u << " -> " << v << endl;
 
-			if (color[u] == 1 && color[v] == 1) {
+			if (color[u] == SOURCE && color[v] == SOURCE) {
 				if (v != source && v != sink) {
 					orphans.push(v);
 					parent[v] = NULL;
 				}
 			}
-			if (color[u] == 2 && color[v] == 2) {
+			if (color[u] == SINK && color[v] == SINK) {
 				if (u != source && u != sink) {
 					orphans.push(u);
 					parent[u] = NULL;
@@ -358,18 +338,22 @@ void FlowGraph::augment(Edge* e) {
 			cur = parent[cur->to];
 		}
 	}
-	//cout << "Len: " << len << endl;
+	return len;
 }
 
-int FlowGraph::treeOrigin(int u) {
+int FlowGraph::treeOrigin(int u) const {
 	int cur = u;
-	while (parent[cur] != NULL) {
-		if (color[cur] == 1)
+
+	if (color[cur] == SOURCE) {
+		while (parent[cur] != NULL) {
 			cur = parent[cur]->from;
-		else if (color[cur] == 2)
+		}
+	} else if (color[cur] == SINK) {
+		while (parent[cur] != NULL) {
 			cur = parent[cur]->to;
-		else
-			assert(0);
+		}
+	} else {
+		exit(1);
 	}
 
 	return cur;
@@ -381,7 +365,7 @@ void FlowGraph::adopt() {
 		//cout << "Orphan: " << u << endl;
 		orphans.pop();
 
-		assert(color[u] != 0);
+		assert(color[u] != FREE);
 
 		bool found = false;
 		for (size_t i = 0; i < G[u].size() && !found; ++i) {
@@ -435,7 +419,7 @@ void FlowGraph::adopt() {
 				}
 			}
 
-			color[u] = 0;
+			color[u] = FREE;
 
 			active[u] = 0;
 			/* We might still have u in the queue */
@@ -448,6 +432,8 @@ void FlowGraph::minCutBK(int source, int sink) {
 	adopt();
 
 	//cout << "Num active: " << numActive() << endl;
+	int numpaths = 0;
+	int totlen   = 0;
 	while (true) {
 		Edge *e;
 		//cout << "Growing path" << endl;
@@ -460,16 +446,19 @@ void FlowGraph::minCutBK(int source, int sink) {
 		}
 
 		//cout << "Augmenting along path" << endl;
-		augment(e);
+		totlen += augment(e);
+		numpaths++;
 		//cout << "Adopting orphans" << endl;
 		adopt();
 	}
 
+	//cout << "Avg length: " << double(totlen) / double(numpaths) << endl;
+
 	int size1 = 0, size2 = 0;
 	for (size_t i = 0; i < cut.size(); ++i) {
-		if (color[i] == 1) size1++;
-		else if (color[i] == 2) size2++;
-		cut[i] = color[i] == 2;
+		if (color[i] == SOURCE) size1++;
+		else if (color[i] == SINK) size2++;
+		cut[i] = color[i] == SINK;
 	}
 	assert(checkCapacity());
 	assert(checkActive());
