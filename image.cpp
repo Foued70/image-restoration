@@ -177,9 +177,7 @@ void setupSource(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 
 	for (int j = 0; j < in.rows; ++j) {
 		for (int i = 0; i < in.cols; ++i) {
-			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
 			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
-
 			s_caps[j*in.cols + i] += max(e1init, 0);
 		}
 	}

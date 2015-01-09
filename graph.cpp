@@ -48,48 +48,51 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		exit(1);
 	}
 
-	int diff = cap - G[from][index].cap;
+	int rs = G[source][s_index[from]].cap - G[source][s_index[from]].flow;
+	int rt = cap - G[from][index].flow;
 
 	G[from][index].cap = cap;
 
-	//if (to == sink) {
-	//	int diff_s = G[source][s_index[from]].cap - G[source][s_index[from]].flow;
-	//	int diff_t = G[from][index].cap - G[from][index].flow;
+	if (to != sink)
+		return;
 
-	//	int m = min(diff_s, diff_t);
-	//	push(G[source][s_index[from]], m);
-	//	push(G[from][index], m);
-	//	//cout << "Updatemax: " << m << endl;
-	//}
+	if (rs > 0 && rt > 0) {
+		int m = min(rs, rt);
+		push(G[source][s_index[from]], m);
+		push(G[from][index], m);
 
-	if (diff > 0) {
-		if (G[source][s_index[from]].cap - G[source][s_index[from]].flow >= diff) {
-			push(G[source][s_index[from]], diff);
-			push(G[from][index], diff);
-		}
-		if (G[from][index].flow != G[from][index].cap) {
-			if (!active[from]) {
-				bkq.push(from);
-				active[from] = 1;
-			}
-			if (!active[to]) {
-				bkq.push(to);
-				active[to] = 1;
-			}
-		}
-	}
-
-	if (cap == 0) {
-		if (color[from] == 1 && color[to] == 1) {
+		if (m == rs && parent[to] == &G[source][s_index[from]]) {
 			parent[to] = NULL;
 			orphans.push(to);
 		}
-		if (color[from] == 2 && color[to] == 2) {
-			parent[from] = NULL;
-			orphans.push(from);
+		if (m == rt && parent[to] == &G[from][index]) {
+			parent[to] = NULL;
+			orphans.push(to);
 		}
-		cout << "SHOULDN'T HAPPEN" << endl;
 	}
+
+	if (G[from][index].flow != G[from][index].cap) {
+		if (!active[from]) {
+			bkq.push(from);
+			active[from] = 1;
+		}
+		if (!active[to]) {
+			bkq.push(to);
+			active[to] = 1;
+		}
+	}
+
+	//if (cap == 0) {
+	//	if (color[from] == 1 && color[to] == 1) {
+	//		parent[to] = NULL;
+	//		orphans.push(to);
+	//	}
+	//	if (color[from] == 2 && color[to] == 2) {
+	//		parent[from] = NULL;
+	//		orphans.push(from);
+	//	}
+	//	cout << "SHOULDN'T HAPPEN" << endl;
+	//}
 }
 
 /* Reset all flow and excess. */
@@ -204,40 +207,6 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	for (size_t i = 0; i < cut.size(); ++i) {
 		cut[i] = height[i] >= N;
 	}
-}
-
-void FlowGraph::pushDirect(int source, int sink) {
-}
-
-/*
- * Initialize.
- */
-void FlowGraph::initBK(int source, int sink) {
-	//fill(active.begin(), active.end(), 0);
-	//fill(color.begin(), color.end(), 0);
-	//fill(parent.begin(), parent.end(), (Edge*)NULL);
-	lastGrowVertex = -1;
-
-	static bool first = true;
-
-	//std::queue<int> empty1;
-	//std::swap(orphans, empty1);
-
-	//std::queue<int> empty2;
-	//std::swap(bkq, empty2);
-
-	//resetFlow();
-
-	if (first) {
-		color[source]  = 1;
-		color[sink]    = 2;
-		active[source] = 1;
-		active[sink] = 1;
-		bkq.push(source);
-		bkq.push(sink);
-		first = false;
-	}
-	adopt();
 }
 
 int FlowGraph::treeCap(int p, int i, int col) {
@@ -475,8 +444,8 @@ void FlowGraph::adopt() {
 }
 
 void FlowGraph::minCutBK(int source, int sink) {
-	initBK(source, sink);
-	pushDirect(source, sink);
+	lastGrowVertex = -1;
+	adopt();
 
 	//cout << "Num active: " << numActive() << endl;
 	while (true) {
@@ -498,15 +467,14 @@ void FlowGraph::minCutBK(int source, int sink) {
 
 	int size1 = 0, size2 = 0;
 	for (size_t i = 0; i < cut.size(); ++i) {
-		if (color[i] == 0) cout << "boop" << endl;
-		else if (color[i] == 1) size1++;
+		if (color[i] == 1) size1++;
 		else if (color[i] == 2) size2++;
 		cut[i] = color[i] == 2;
 	}
 	assert(checkCapacity());
 	assert(checkActive());
 	//cout << "Num active: " << numActive() << endl;
-	//cout << "size1: " << size1 << ", size2: " << size2 << endl;
+	cout << "Inbetweeners: " << cut.size() - size1 - size2 << endl;
 }
 
 bool FlowGraph::checkExcess(void) {

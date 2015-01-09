@@ -55,13 +55,21 @@ public:
 		s_index(N),
 		t_index(N),
 		count(N+1),
-       		rule(rule),
+		rule(rule),
 		active(N),
 		color(N),
 		starti(N),
 		parent(N),
 		lastGrowVertex(-1),
-		cut(N) {}
+		cut(N) {
+
+		color[source]  = 1;
+		color[sink]    = 2;
+		active[source] = 1;
+		active[sink]   = 1;
+		bkq.push(source);
+		bkq.push(sink);
+	}
 
 	int getSource() { return source; }
 	int getSink() { return sink; }
@@ -81,7 +89,6 @@ public:
 	void pushDirect(int source, int sink);
 	void minCutBK(int source, int sink);
 	void augment(Edge *e);
-	void initBK(int source, int sink);
 	int treeCap(int p, int i, int col);
 	int treeCap(Edge& e, int col);
 	int treeOrigin(int u);
