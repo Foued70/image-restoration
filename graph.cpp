@@ -48,7 +48,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		exit(1);
 	}
 
-	int diff = G[from][index].flow - cap;
+	int diff = cap - G[from][index].cap;
 
 	G[from][index].cap = cap;
 
@@ -62,24 +62,23 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	//	//cout << "Updatemax: " << m << endl;
 	//}
 
-	if (G[from][index].flow != G[from][index].cap) {
-		if (!active[from]) {
-			bkq.push(from);
-			active[from] = 1;
+	if (diff > 0) {
+		if (G[source][s_index[from]].cap - G[source][s_index[from]].flow >= diff) {
+			push(G[source][s_index[from]], diff);
+			push(G[from][index], diff);
 		}
-		if (!active[to]) {
-			bkq.push(to);
-			active[to] = 1;
+		if (G[from][index].flow != G[from][index].cap) {
+			if (!active[from]) {
+				bkq.push(from);
+				active[from] = 1;
+			}
+			if (!active[to]) {
+				bkq.push(to);
+				active[to] = 1;
+			}
 		}
 	}
 
-	if (diff > 0) {
-		excess[from] += diff;
-		excess[to] -= diff;
-		G[from][index].flow = cap;
-		G[to][G[from][index].index].flow = -cap;
-		rule.add(from, height[from], excess[from]);
-	}
 	if (cap == 0) {
 		if (color[from] == 1 && color[to] == 1) {
 			parent[to] = NULL;
@@ -89,7 +88,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 			parent[from] = NULL;
 			orphans.push(from);
 		}
-		//cout << "BEEP: " << from << " -> " << to << ": " << cap << endl;
+		cout << "SHOULDN'T HAPPEN" << endl;
 	}
 }
 
@@ -475,20 +474,11 @@ void FlowGraph::adopt() {
 	}
 }
 
-void printQ(queue<int> q) {
-	//while (!q.empty()) {
-	//	cout << q.front() << ", ";
-	//	q.pop();
-	//}
-	//cout << endl;
-	cout << "QUEUE LEN: " << q.size() << endl;
-}
-
 void FlowGraph::minCutBK(int source, int sink) {
 	initBK(source, sink);
 	pushDirect(source, sink);
 
-	cout << "Num active: " << numActive() << endl;
+	//cout << "Num active: " << numActive() << endl;
 	while (true) {
 		Edge *e;
 		//cout << "Growing path" << endl;
@@ -515,7 +505,7 @@ void FlowGraph::minCutBK(int source, int sink) {
 	}
 	assert(checkCapacity());
 	assert(checkActive());
-	cout << "Num active: " << numActive() << endl;
+	//cout << "Num active: " << numActive() << endl;
 	//cout << "size1: " << size1 << ", size2: " << size2 << endl;
 }
 
