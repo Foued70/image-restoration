@@ -7,6 +7,8 @@
 #include <set>
 #include "selectionrule.hpp"
 
+enum Color { FREE = 0, SOURCE, SINK };
+
 class Edge {
 private:
 
@@ -20,13 +22,27 @@ public:
 		from(f), to(t), cap(c), flow(0), index(i) {}
 };
 
-enum Color { FREE = 0, SOURCE, SINK };
+class Vertex {
+private:
+
+public:
+	std::vector<Edge> e;
+	Color c;
+	bool active;
+	Edge *p;
+
+	Vertex(Color c, bool a) :
+		c(c), active(a) {}
+
+	Vertex() :
+		c(FREE), active(false), p(NULL) {}
+};
 
 class FlowGraph {
 private:
 	int N;
 	int source, sink;
-	std::vector<std::vector<Edge> > G;
+	std::vector<Vertex > G;
 	std::vector<int> excess;
 	std::vector<int> height;
 	std::vector<int> s_index;
@@ -35,9 +51,6 @@ private:
 	SelectionRule& rule;
 
 	/* BK stuff */
-	std::vector<int> active;
-	std::vector<Color> color;
-	std::vector<Edge*> parent;
 	std::queue<int> bkq;
 	std::queue<int> orphans;
 
@@ -57,18 +70,15 @@ public:
 		t_index(N),
 		count(N+1),
 		rule(rule),
-		active(N),
-		color(N),
-		parent(N),
 		lastGrowVertex(-1),
 		cut(N) {
 
-		color[source]  = SOURCE;
-		color[sink]    = SINK;
-		active[source] = 1;
-		active[sink]   = 1;
 		bkq.push(source);
 		bkq.push(sink);
+		G[source].c = SOURCE;
+		G[sink].c   = SINK;
+		G[source].active = true;
+		G[sink].active   = true;
 	}
 
 	int getSource() const { return source; }

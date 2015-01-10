@@ -12,10 +12,10 @@ using namespace std;
 
 /* Add an edge from one vertex to another. */
 void FlowGraph::addEdge(int from, int to, int cap) {
-	G[from].push_back(Edge(from, to, cap, G[to].size()));
-	if (from == to) G[from].back().index++;
-	int index = G[from].size() - 1;
-	G[to].push_back(Edge(to, from, 0, index));
+	G[from].e.push_back(Edge(from, to, cap, G[to].e.size()));
+	if (from == to) G[from].e.back().index++;
+	int index = G[from].e.size() - 1;
+	G[to].e.push_back(Edge(to, from, 0, index));
 
 	if (from == source)
 		s_index[to] = index;
@@ -29,8 +29,8 @@ void FlowGraph::addEdge(int from, int to, int cap) {
  * with the same capacity.
  */
 void FlowGraph::addDoubleEdge(int from, int to, int cap) {
-	G[from].push_back(Edge(from, to, cap, G[to].size()));
-	G[to].push_back(Edge(to, from, cap, G[from].size() - 1));
+	G[from].e.push_back(Edge(from, to, cap, G[to].e.size()));
+	G[to].e.push_back(Edge(to, from, cap, G[from].e.size() - 1));
 }
 
 /*
@@ -47,7 +47,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		exit(1);
 	}
 
-	G[from][index].cap = cap;
+	G[from].e[index].cap = cap;
 
 	if (to != sink)
 		return;
@@ -55,31 +55,35 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	int si = s_index[from];
 	int ti = t_index[from];
 
-	int rs = G[source][si].cap - G[source][si].flow;
-	int rt = cap - G[from][ti].flow;
+	Edge *sv, *vt;
+	sv = &G[source].e[si];
+	vt = &G[from].e[ti];
+
+	int rs = sv->cap - sv->flow;
+	int rt = cap - vt->flow;
 
 	if (rs > 0 && rt > 0) {
 		int m = min(rs, rt);
-		push(G[source][si], m);
-		push(G[from][ti], m);
+		push(*sv, m);
+		push(*vt, m);
 
-		if (m == rs && parent[to] == &G[from][G[source][si].index]) {
-			parent[to] = NULL;
-			orphans.push(to);
-		} else if (m == rt && parent[to] == &G[from][ti]) {
-			parent[to] = NULL;
-			orphans.push(to);
+		if (m == rs && G[from].p == &G[from].e[sv->index]) {
+			G[from].p = NULL;
+			orphans.push(from);
+		} else if (m == rt && G[from].p == vt) {
+			G[from].p = NULL;
+			orphans.push(from);
 		}
 	}
 
-	if (G[from][ti].flow != G[from][ti].cap) {
-		if (!active[from]) {
+	if (G[from].e[ti].flow != G[from].e[ti].cap) {
+		if (!G[from].active) {
 			bkq.push(from);
-			active[from] = 1;
+			G[from].active = true;
 		}
-		if (!active[to]) {
+		if (!G[to].active) {
 			bkq.push(to);
-			active[to] = 1;
+			G[to].active = true;
 		}
 	}
 }
@@ -87,8 +91,8 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 /* Reset all flow and excess. */
 void FlowGraph::resetFlow() {
 	for (size_t i = 0; i < G.size(); ++i) {
-		for (size_t j = 0; j < G[i].size(); ++j) {
-			G[i][j].flow = 0;
+		for (size_t j = 0; j < G[i].e.size(); ++j) {
+			G[i].e[j].flow = 0;
 		}
 	}
 	fill(excess.begin(), excess.end(), 0);
@@ -106,7 +110,7 @@ void FlowGraph::push(Edge &e) {
 	excess[e.from] -= flow;
 	excess[e.to]   += flow;
 	e.flow += flow;
-	G[e.to][e.index].flow -= flow;
+	G[e.to].e[e.index].flow -= flow;
 
 	rule.add(e.to, height[e.to], excess[e.to]);
 }
@@ -114,7 +118,7 @@ void FlowGraph::push(Edge &e) {
 /* Push given flow along an edge. */
 void FlowGraph::push(Edge &e, int f) {
 	e.flow += f;
-	G[e.to][e.index].flow -= f;
+	G[e.to].e[e.index].flow -= f;
 }
 
 /* Relabel a vertex. */
@@ -122,9 +126,9 @@ void FlowGraph::relabel(int u) {
 	count[height[u]]--;
 	height[u] = 2*N;
 
-	for (size_t i = 0; i < G[u].size(); ++i) {
-		if (G[u][i].cap > G[u][i].flow) {
-			height[u] = min(height[u], height[G[u][i].to] + 1);
+	for (size_t i = 0; i < G[u].e.size(); ++i) {
+		if (G[u].e[i].cap > G[u].e[i].flow) {
+			height[u] = min(height[u], height[G[u].e[i].to] + 1);
 		}
 	}
 
@@ -155,10 +159,10 @@ void FlowGraph::gap(int h) {
 /* Discharge a vertex. */
 void FlowGraph::discharge(int u) {
 	size_t i;
-	for (i = 0; i < G[u].size() && excess[u] > 0; ++i) {
-		if (G[u][i].cap > G[u][i].flow
-				&& height[u] == height[G[u][i].to] + 1) {
-			push(G[u][i]);
+	for (i = 0; i < G[u].e.size() && excess[u] > 0; ++i) {
+		if (G[u].e[i].cap > G[u].e[i].flow
+				&& height[u] == height[G[u].e[i].to] + 1) {
+			push(G[u].e[i]);
 		}
 	}
 
@@ -178,9 +182,9 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	rule.activate(source);
 	rule.activate(sink);
 
-	for (size_t i = 0; i < G[source].size(); ++i) {
-		excess[source] = G[source][i].cap;
-		push(G[source][i]);
+	for (size_t i = 0; i < G[source].e.size(); ++i) {
+		excess[source] = G[source].e[i].cap;
+		push(G[source].e[i]);
 	}
 	excess[source] = 0;
 
@@ -202,7 +206,7 @@ int FlowGraph::treeCap(const Edge& e, Color col) const {
 	if (col == SOURCE)
 		return e.cap - e.flow;
 	else if (col == SINK)
-		return G[e.to][e.index].cap - G[e.to][e.index].flow;
+		return G[e.to].e[e.index].cap - G[e.to].e[e.index].flow;
 	else
 		return 0;
 }
@@ -212,7 +216,7 @@ Edge *FlowGraph::grow() {
 
 	while (!bkq.empty()) {
 		int p = bkq.front();
-		if (!active[p]) {
+		if (!G[p].active) {
 			bkq.pop();
 			continue;
 		}
@@ -223,42 +227,42 @@ Edge *FlowGraph::grow() {
 
 		lastGrowVertex = p;
 
-		for (; i < G[p].size(); ++i) {
-			Edge *e = &G[p][i];
+		for (; i < G[p].e.size(); ++i) {
+			Edge *e = &G[p].e[i];
 			int q = e->to;
 
-			if (color[p] == color[q])
+			if (G[p].c == G[q].c)
 				continue;
 
-			if (treeCap(*e, color[p]) <= 0)
+			if (treeCap(*e, G[p].c) <= 0)
 				continue;
 
-			if (color[q] == FREE) {
-				color[q] = color[p];
+			if (G[q].c == FREE) {
+				G[q].c = G[p].c;
 
 				//cout << "Parent of " << q << " is now " << p << endl;
-				if (color[p] == SOURCE) {
-					parent[q] = e;
+				if (G[p].c == SOURCE) {
+					G[q].p = e;
 					assert(treeOrigin(p) == source);
-				} else if (color[p] == SINK) {
-					parent[q] = &G[q][e->index];
+				} else if (G[p].c == SINK) {
+					G[q].p = &G[q].e[e->index];
 					assert(treeOrigin(p) == sink);
 				} else {
-					cout << color[p] << endl;
+					cout << G[p].c << endl;
 					exit(1);
 				}
 
-				active[q] = 1;
+				G[q].active = 1;
 				bkq.push(q);
 			}
-			else if (color[q] != color[p]) {
+			else if (G[q].c != G[p].c) {
 
 				//cout << "The trees meet! " << p << " -> " << q << endl;
-				if (color[p] == SOURCE) {
+				if (G[p].c == SOURCE) {
 					return e;
 				}
-				else if (color[p] == SINK) {
-					return &G[q][e->index];
+				else if (G[p].c == SINK) {
+					return &G[q].e[e->index];
 				}
 				else {
 					exit(1);
@@ -269,7 +273,7 @@ Edge *FlowGraph::grow() {
 		}
 
 		bkq.pop();
-		active[p] = 0;
+		G[p].active = 0;
 	}
 
 	/* Path is empty */
@@ -282,13 +286,13 @@ int FlowGraph::augment(Edge* e) {
 	Edge *cur = e;
 	while (cur != NULL) {
 		m = min(m, cur->cap - cur->flow);
-		cur = parent[cur->from];
+		cur = G[cur->from].p;
 	}
 
 	cur = e;
 	while (cur != NULL) {
 		m = min(m, cur->cap - cur->flow);
-		cur = parent[cur->to];
+		cur = G[cur->to].p;
 	}
 	//cout << path[path.size()-1]->to;
 	//cout << " : " << m << endl;
@@ -308,16 +312,16 @@ int FlowGraph::augment(Edge* e) {
 
 			//cout << "Saturation at " << u << " -> " << v << endl;
 
-			if (color[u] == SOURCE && color[v] == SOURCE) {
+			if (G[u].c == SOURCE && G[v].c == SOURCE) {
 				if (v != source && v != sink) {
 					orphans.push(v);
-					parent[v] = NULL;
+					G[v].p = NULL;
 				}
 			}
-			if (color[u] == SINK && color[v] == SINK) {
+			if (G[u].c == SINK && G[v].c == SINK) {
 				if (u != source && u != sink) {
 					orphans.push(u);
-					parent[u] = NULL;
+					G[u].p = NULL;
 				}
 			}
 		}
@@ -329,13 +333,13 @@ int FlowGraph::augment(Edge* e) {
 		 * in e, and go towards the sink.
 		 */
 		if (back) {
-			cur = parent[cur->from];
+			cur = G[cur->from].p;
 			if (cur == NULL) {
 				back = false;
-				cur = parent[e->to];
+				cur = G[e->to].p;
 			}
 		} else {
-			cur = parent[cur->to];
+			cur = G[cur->to].p;
 		}
 	}
 	return len;
@@ -344,13 +348,13 @@ int FlowGraph::augment(Edge* e) {
 int FlowGraph::treeOrigin(int u) const {
 	int cur = u;
 
-	if (color[cur] == SOURCE) {
-		while (parent[cur] != NULL) {
-			cur = parent[cur]->from;
+	if (G[cur].c == SOURCE) {
+		while (G[cur].p != NULL) {
+			cur = G[cur].p->from;
 		}
-	} else if (color[cur] == SINK) {
-		while (parent[cur] != NULL) {
-			cur = parent[cur]->to;
+	} else if (G[cur].c == SINK) {
+		while (G[cur].p != NULL) {
+			cur = G[cur].p->to;
 		}
 	} else {
 		exit(1);
@@ -365,16 +369,16 @@ void FlowGraph::adopt() {
 		//cout << "Orphan: " << u << endl;
 		orphans.pop();
 
-		assert(color[u] != FREE);
+		assert(G[u].c != FREE);
 
 		bool found = false;
-		for (size_t i = 0; i < G[u].size() && !found; ++i) {
-			int v = G[u][i].to;
+		for (size_t i = 0; i < G[u].e.size() && !found; ++i) {
+			int v = G[u].e[i].to;
 
-			if (color[u] != color[v])
+			if (G[u].c != G[v].c)
 				continue;
 
-			if (treeCap(G[v][G[u][i].index], color[u]) <= 0)
+			if (treeCap(G[v].e[G[u].e[i].index], G[u].c) <= 0)
 				continue;
 
 			int origin = treeOrigin(v);
@@ -386,10 +390,10 @@ void FlowGraph::adopt() {
 
 			//cout << "Parent of " << u << " is now " << v << endl;
 			if (origin == source) {
-				parent[u] = &G[v][G[u][i].index];
+				G[u].p = &G[v].e[G[u].e[i].index];
 				found = true;
 			} else if (origin == sink) {
-				parent[u] = &G[u][i];
+				G[u].p = &G[u].e[i];
 				found = true;
 			} else {
 				assert(0);
@@ -397,31 +401,31 @@ void FlowGraph::adopt() {
 		}
 
 		if (!found) {
-			for (size_t i = 0; i < G[u].size(); ++i) {
-				int v = G[u][i].to;
+			for (size_t i = 0; i < G[u].e.size(); ++i) {
+				int v = G[u].e[i].to;
 
-				if (color[u] != color[v])
+				if (G[u].c != G[v].c)
 					continue;
 
-				if (treeCap(G[v][G[u][i].index], color[v]) > 0) {
-					active[v] = 1;
+				if (treeCap(G[v].e[G[u].e[i].index], G[v].c) > 0) {
+					G[v].active = true;
 					bkq.push(v);
 				}
 
 				if (v == source || v == sink)
 					continue;
 
-				if (parent[v]
-						&& (parent[v]->to == u
-						||  parent[v]->from == u)) {
+				if (G[v].p
+						&& (G[v].p->to == u
+						||  G[v].p->from == u)) {
 					orphans.push(v);
-					parent[v] = NULL;
+					G[v].p = NULL;
 				}
 			}
 
-			color[u] = FREE;
+			G[u].c = FREE;
 
-			active[u] = 0;
+			G[u].active = false;
 			/* We might still have u in the queue */
 		}
 	}
@@ -452,13 +456,13 @@ void FlowGraph::minCutBK(int source, int sink) {
 		adopt();
 	}
 
-	//cout << "Avg length: " << double(totlen) / double(numpaths) << endl;
+	cout << "Avg length: " << double(totlen) / double(numpaths) << endl;
 
 	int size1 = 0, size2 = 0;
 	for (size_t i = 0; i < cut.size(); ++i) {
-		if (color[i] == SOURCE) size1++;
-		else if (color[i] == SINK) size2++;
-		cut[i] = color[i] == SINK;
+		if (G[i].c == SOURCE) size1++;
+		else if (G[i].c == SINK) size2++;
+		cut[i] = G[i].c == SINK;
 	}
 	assert(checkCapacity());
 	assert(checkActive());
@@ -478,8 +482,8 @@ bool FlowGraph::checkExcess(void) {
 
 bool FlowGraph::checkActive(void) {
 	bool ret = true;
-	for (size_t i = 0; i < active.size(); ++i) {
-		if (active[i] != 0) {
+	for (size_t i = 0; i < G.size(); ++i) {
+		if (G[i].active) {
 			cout << i << " is active." << endl;
 			ret = false;
 		}
@@ -490,8 +494,8 @@ bool FlowGraph::checkActive(void) {
 
 int FlowGraph::numActive(void) {
 	int num = 0;
-	for (size_t i = 0; i < active.size(); ++i) {
-		if (active[i] != 0) {
+	for (size_t i = 0; i < G.size(); ++i) {
+		if (G[i].active) {
 			num++;
 		}
 	}
@@ -501,8 +505,8 @@ int FlowGraph::numActive(void) {
 
 bool FlowGraph::checkCapacity(void) {
 	for (size_t i = 0; i < G.size(); ++i) {
-		for (size_t j = 0; j < G[i].size(); ++j) {
-			if (G[i][j].flow > G[i][j].cap) return false;
+		for (size_t j = 0; j < G[i].e.size(); ++j) {
+			if (G[i].e[j].flow > G[i].e[j].cap) return false;
 		}
 	}
 
@@ -511,9 +515,9 @@ bool FlowGraph::checkCapacity(void) {
 
 bool FlowGraph::checkLabels(void) {
 	for (size_t i = 0; i < G.size(); ++i) {
-		for (size_t j = 0; j < G[i].size(); ++j) {
-			if (G[i][j].flow < G[i][j].cap) {
-				if (height[i] > height[G[i][j].to] + 1) {
+		for (size_t j = 0; j < G[i].e.size(); ++j) {
+			if (G[i].e[j].flow < G[i].e[j].cap) {
+				if (height[i] > height[G[i].e[j].to] + 1) {
 					return false;
 				}
 			}
@@ -541,16 +545,16 @@ bool FlowGraph::checkCount(void) {
 
 int FlowGraph::outFlow(int source) {
 	int c = 0;
-	for (size_t i = 0; i < G[source].size(); ++i) {
-		c += G[source][i].flow;
+	for (size_t i = 0; i < G[source].e.size(); ++i) {
+		c += G[source].e[i].flow;
 	}
 	return c;
 }
 
 int FlowGraph::inFlow(int sink) {
 	int c = 0;
-	for (size_t i = 0; i < G[sink].size(); ++i) {
-		c += G[sink][i].flow;
+	for (size_t i = 0; i < G[sink].e.size(); ++i) {
+		c += G[sink].e[i].flow;
 	}
 	return c;
 }
