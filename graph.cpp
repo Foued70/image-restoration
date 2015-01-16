@@ -240,13 +240,14 @@ Edge *FlowGraph::grow() {
 			if (G[q].c == FREE) {
 				G[q].c = G[p].c;
 
+				int len;
 				//cout << "Parent of " << q << " is now " << p << endl;
 				if (G[p].c == SOURCE) {
 					G[q].p = e;
-					assert(treeOrigin(p) == source);
+					assert(treeOrigin(p, len) == source);
 				} else if (G[p].c == SINK) {
 					G[q].p = &G[q].e[e->index];
-					assert(treeOrigin(p) == sink);
+					assert(treeOrigin(p, len) == sink);
 				} else {
 					cout << G[p].c << endl;
 					exit(1);
@@ -345,16 +346,19 @@ int FlowGraph::augment(Edge* e) {
 	return len;
 }
 
-int FlowGraph::treeOrigin(int u) const {
+int FlowGraph::treeOrigin(int u, int &len) const {
 	int cur = u;
+	len = 0;
 
 	if (G[cur].c == SOURCE) {
 		while (G[cur].p != NULL) {
 			cur = G[cur].p->from;
+			len++;
 		}
 	} else if (G[cur].c == SINK) {
 		while (G[cur].p != NULL) {
 			cur = G[cur].p->to;
+			len++;
 		}
 	} else {
 		exit(1);
@@ -364,6 +368,7 @@ int FlowGraph::treeOrigin(int u) const {
 }
 
 void FlowGraph::adopt() {
+	cout << "Adopting: " << orphans.size() << endl;
 	while (orphans.size() > 0) {
 		int u = orphans.front();
 		//cout << "Orphan: " << u << endl;
@@ -371,8 +376,9 @@ void FlowGraph::adopt() {
 
 		assert(G[u].c != FREE);
 
-		bool found = false;
-		for (size_t i = 0; i < G[u].e.size() && !found; ++i) {
+		int minlen = 1000000000;
+		int minidx = -1;
+		for (size_t i = 0; i < G[u].e.size(); ++i) {
 			int v = G[u].e[i].to;
 
 			if (G[u].c != G[v].c)
@@ -381,14 +387,26 @@ void FlowGraph::adopt() {
 			if (treeCap(G[v].e[G[u].e[i].index], G[u].c) <= 0)
 				continue;
 
-			int origin = treeOrigin(v);
+			int len;
+			int origin = treeOrigin(v, len);
 			if (origin != source && origin != sink)
 				continue;
 
-			//cout << "Possible parent: " << v << endl;
+			if (len < minlen) {
+				minlen = len;
+				minidx = i;
+			}
+			if (minlen <= 2) break;
 			/* Found a possible parent */
+		}
 
-			//cout << "Parent of " << u << " is now " << v << endl;
+		bool found = false;
+		if (minidx != -1) {
+			int i = minidx;
+			int v = G[u].e[i].to;
+			int len;
+			int origin = treeOrigin(v, len);
+
 			if (origin == source) {
 				G[u].p = &G[v].e[G[u].e[i].index];
 				found = true;
@@ -396,7 +414,7 @@ void FlowGraph::adopt() {
 				G[u].p = &G[u].e[i];
 				found = true;
 			} else {
-				assert(0);
+				exit(1);
 			}
 		}
 

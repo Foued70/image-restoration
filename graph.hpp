@@ -99,7 +99,7 @@ public:
 	void minCutBK(int source, int sink);
 	int augment(Edge *e);
 	int treeCap(const Edge& e, Color col) const;
-	int treeOrigin(int u) const;
+	int treeOrigin(int u, int &len) const;
 	void adopt();
 	Edge *grow();
 
