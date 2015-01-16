@@ -46,6 +46,8 @@ methodnoise
 sobel
 colorwheel
 fiddle/fiddle
+flowtest
+pertest
 
 # Object files
 *.o
