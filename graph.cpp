@@ -47,6 +47,10 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		exit(1);
 	}
 
+	/* Nodes in the T set can not recieve any more flow anyways. */
+	if (from != source && G[from].c == SINK)
+		return;
+
 	G[from].e[index].cap = cap;
 
 	if (to != sink)
@@ -368,7 +372,7 @@ int FlowGraph::treeOrigin(int u, int &len) const {
 }
 
 void FlowGraph::adopt() {
-	cout << "Adopting: " << orphans.size() << endl;
+	//cout << "Adopting: " << orphans.size() << endl;
 	while (orphans.size() > 0) {
 		int u = orphans.front();
 		//cout << "Orphan: " << u << endl;

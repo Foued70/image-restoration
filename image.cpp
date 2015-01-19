@@ -159,7 +159,7 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 			//	t_caps[j*in.cols + i] += 0 - e1;
 			//}
 			s_caps[j*in.cols + i] += max(e1init, 0);
-			t_caps[j*in.cols + i] += max(-e1init, 0) - (e1 - e1init);
+			t_caps[j*in.cols + i] += max(e1init, 0) - e1;
 		}
 	}
 
@@ -195,7 +195,7 @@ void setupSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
 			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
 
-			t_caps[j*in.cols + i] += max(-e1init, 0) - (e1 - e1init);
+			t_caps[j*in.cols + i] += max(e1init, 0) - e1;
 		}
 	}
 
