@@ -108,6 +108,7 @@ public:
 
 	int numActive(void);
 	bool checkExcess(void);
+	bool checkTree(void);
 	bool checkActive(void);
 	bool checkCapacity(void);
 	bool checkLabels(void);

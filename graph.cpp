@@ -64,17 +64,19 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	vt = &G[from].e[ti];
 
 	int rs = sv->cap - sv->flow;
-	int rt = cap - vt->flow;
+	int rt = vt->cap - vt->flow;
 
 	if (rs > 0 && rt > 0) {
 		int m = min(rs, rt);
 		push(*sv, m);
 		push(*vt, m);
 
-		if (m == rs && G[from].p == &G[from].e[sv->index]) {
+		if (m == rs && G[from].p == sv) {
 			G[from].p = NULL;
 			orphans.push(from);
-		} else if (m == rt && G[from].p == vt) {
+		}
+		
+		if (m == rt && G[from].p == vt) {
 			G[from].p = NULL;
 			orphans.push(from);
 		}
@@ -224,7 +226,8 @@ Edge *FlowGraph::grow() {
 			bkq.pop();
 			continue;
 		}
-		//cout << "Growing from (" << G[p].size() << "): " << p << endl;
+		//cout << "Growing from (" << G[p].e.size() << "): " << p << endl;
+		//cout << "last = " << i << endl;
 
 		if (lastGrowVertex != p)
 			i = 0;
@@ -261,7 +264,6 @@ Edge *FlowGraph::grow() {
 				bkq.push(q);
 			}
 			else if (G[q].c != G[p].c) {
-
 				//cout << "The trees meet! " << p << " -> " << q << endl;
 				if (G[p].c == SOURCE) {
 					return e;
@@ -347,6 +349,7 @@ int FlowGraph::augment(Edge* e) {
 			cur = G[cur->to].p;
 		}
 	}
+	//cout << "Len: " << len << endl;
 	return len;
 }
 
@@ -458,13 +461,13 @@ void FlowGraph::minCutBK(int source, int sink) {
 	adopt();
 
 	//cout << "Num active: " << numActive() << endl;
-	int numpaths = 0;
-	int totlen   = 0;
+	int numpaths  = 0;
+	double totlen = 0;
 	while (true) {
 		Edge *e;
 		//cout << "Growing path" << endl;
-		//printQ(bkq);
 		e = grow();
+		//checkTree();
 
 		if (e == NULL) {
 			//cout << "Path was empty..." << endl;
@@ -500,6 +503,26 @@ bool FlowGraph::checkExcess(void) {
 	}
 
 	return true;
+}
+
+bool FlowGraph::checkTree(void) {
+	bool ret = true;
+	for (size_t i = 0; i < G.size(); ++i) {
+		if (G[i].c == FREE) continue;
+		int len;
+		if ((treeOrigin(i, len) != getSource() && G[i].c == SOURCE)
+				|| (treeOrigin(i, len) != getSink() && G[i].c == SINK)) {
+			cout << "Origin of " << i << " is " << treeOrigin(i, len) << endl;
+			ret = false;
+		}
+		if (G[i].p == NULL) continue;
+		if (G[i].p->cap - G[i].p->flow <= 0) {
+			cout << "ERR: " << G[i].p->from << " -> " << G[i].p->to;
+			cout << " has cap: " << G[i].p->cap << endl;
+			ret = false;
+		}
+	}
+	return ret;
 }
 
 bool FlowGraph::checkActive(void) {
