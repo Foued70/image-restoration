@@ -178,12 +178,15 @@ void setupSource(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 	for (int j = 0; j < in.rows; ++j) {
 		for (int i = 0; i < in.cols; ++i) {
 			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
-			s_caps[j*in.cols + i] += max(e1init, 0);
+			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
+
+			s_caps[j*in.cols + i] += max(e1init, 0) - e1;
 		}
 	}
 
 	for (size_t i = 0; i < s_caps.size(); ++i) {
-		network.changeCapacity(network.getSource(), i, alpha * s_caps[i]);
+		if (s_caps[i] != 0)
+			network.changeCapacity(network.getSource(), i, alpha * s_caps[i]);
 	}
 }
 
@@ -192,10 +195,9 @@ void setupSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 
 	for (int j = 0; j < in.rows; ++j) {
 		for (int i = 0; i < in.cols; ++i) {
-			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
 			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
 
-			t_caps[j*in.cols + i] += max(e1init, 0) - e1;
+			t_caps[j*in.cols + i] += max(e1init, 0);
 		}
 	}
 
@@ -245,19 +247,19 @@ void restoreAnisotropicTV(
 
 	createEdgesAnisotropic(network, neigh, beta, tensors);
 
-	setupSource(network, in, alpha, 255, p);
+	setupSink(network, in, alpha, 255, p);
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
 
 		//setupSourceSink(network, in, alpha, label, p);
-		setupSink(network, in, alpha, label, p);
+		setupSource(network, in, alpha, label, p);
 		//network.minCutPushRelabel(source, sink);
 		network.minCutBK(source, sink);
 
 		/* Use the cut to update the output image. */
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {
-				if (!network.cut[j*cols + i])
+				if (network.cut[j*cols + i])
 					out.at<uchar>(j, i) = label;
 			}
 		}

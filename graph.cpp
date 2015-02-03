@@ -48,20 +48,20 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	}
 
 	/* Nodes in the T set can not recieve any more flow anyways. */
-	if (from != source && G[from].c == SINK)
-		return;
+	//if (from == source && G[to].c == SOURCE)
+	//	return;
 
 	G[from].e[index].cap = cap;
 
-	if (to != sink)
+	if (from != source)
 		return;
 
-	int si = s_index[from];
-	int ti = t_index[from];
+	int si = s_index[to];
+	int ti = t_index[to];
 
 	Edge *sv, *vt;
 	sv = &G[source].e[si];
-	vt = &G[from].e[ti];
+	vt = &G[to].e[ti];
 
 	int rs = sv->cap - sv->flow;
 	int rt = vt->cap - vt->flow;
@@ -71,18 +71,18 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		push(*sv, m);
 		push(*vt, m);
 
-		if (m == rs && G[from].p == sv) {
-			G[from].p = NULL;
-			orphans.push(from);
+		if (m == rs && G[to].p == sv) {
+			G[to].p = NULL;
+			orphans.push(to);
 		}
 		
-		if (m == rt && G[from].p == vt) {
-			G[from].p = NULL;
-			orphans.push(from);
+		if (m == rt && G[to].p == vt) {
+			G[to].p = NULL;
+			orphans.push(to);
 		}
 	}
 
-	if (G[from].e[ti].flow != G[from].e[ti].cap) {
+	if (G[from].e[si].flow != G[from].e[si].cap) {
 		if (!G[from].active) {
 			bkq.push(from);
 			G[from].active = true;
@@ -551,7 +551,10 @@ int FlowGraph::numActive(void) {
 bool FlowGraph::checkCapacity(void) {
 	for (size_t i = 0; i < G.size(); ++i) {
 		for (size_t j = 0; j < G[i].e.size(); ++j) {
-			if (G[i].e[j].flow > G[i].e[j].cap) return false;
+			if (G[i].e[j].flow > G[i].e[j].cap) {
+				cout << i << " " << j << endl;
+				return false;
+			}
 		}
 	}
 
