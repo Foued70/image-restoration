@@ -30,12 +30,16 @@ public:
 	Color c;
 	bool active;
 	Edge *p;
+	int height;
+	int excess;
+	int si;
+	int ti;
 
 	Vertex(Color c, bool a) :
-		c(c), active(a) {}
+		c(c), active(a), p(NULL), height(0), excess(0), si(0), ti(0) {}
 
 	Vertex() :
-		c(FREE), active(false), p(NULL) {}
+		c(FREE), active(false), p(NULL), height(0), excess(0), si(0), ti(0) {}
 };
 
 class FlowGraph {
@@ -43,10 +47,6 @@ private:
 	int N;
 	int source, sink;
 	std::vector<Vertex > G;
-	std::vector<int> excess;
-	std::vector<int> height;
-	std::vector<int> s_index;
-	std::vector<int> t_index;
 	std::vector<int> count;
 	SelectionRule& rule;
 
@@ -55,7 +55,6 @@ private:
 	std::queue<int> orphans;
 
 	int lastGrowVertex;
-	size_t growIndex;
 public:
 	std::vector<char> cut;
 
@@ -64,21 +63,19 @@ public:
 		source(source),
 		sink(sink),
 		G(N),
-		excess(N),
-		height(N),
-		s_index(N),
-		t_index(N),
 		count(N+1),
 		rule(rule),
 		lastGrowVertex(-1),
 		cut(N) {
 
+#ifdef BOYKOV_KOLMOGOROV
 		bkq.push(source);
 		bkq.push(sink);
 		G[source].c = SOURCE;
 		G[sink].c   = SINK;
 		G[source].active = true;
 		G[sink].active   = true;
+#endif
 	}
 
 	int getSource() const { return source; }

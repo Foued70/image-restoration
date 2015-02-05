@@ -18,10 +18,10 @@ void FlowGraph::addEdge(int from, int to, int cap) {
 	G[to].e.push_back(Edge(to, from, 0, index));
 
 	if (from == source)
-		s_index[to] = index;
+		G[to].si = index;
 
 	if (to == sink)
-		t_index[from] = index;
+		G[from].ti = index;
 }
 
 /*
@@ -42,9 +42,9 @@ void FlowGraph::addDoubleEdge(int from, int to, int cap) {
 void FlowGraph::changeCapacity(int from, int to, int cap) {
 	int index;
 	if (from == source) {
-		index = s_index[to];
+		index = G[to].si;
 	} else if (to == sink) {
-		index = t_index[from];
+		index = G[from].ti;
 	} else {
 		exit(1);
 	}
@@ -54,11 +54,11 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	G[from].e[index].cap = cap;
 
 	if (diff > 0) {
-		excess[from] += diff;
-		excess[to] -= diff;
+		G[from].excess += diff;
+		G[to].excess -= diff;
 		G[from].e[index].flow = cap;
 		G[to].e[G[from].e[index].index].flow = -cap;
-		rule.add(from, height[from], excess[from]);
+		rule.add(from, G[from].height, G[from].excess);
 	}
 }
 
@@ -71,9 +71,9 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 void FlowGraph::changeCapacity(int from, int to, int cap) {
 	int index;
 	if (from == source) {
-		index = s_index[to];
+		index = G[to].si;
 	} else if (to == sink) {
-		index = t_index[from];
+		index = G[from].ti;
 	} else {
 		exit(1);
 	}
@@ -87,8 +87,8 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	if (from != source)
 		return;
 
-	int si = s_index[to];
-	int ti = t_index[to];
+	int si = G[to].si;
+	int ti = G[to].ti;
 
 	Edge *sv, *vt;
 	sv = &G[source].e[si];
@@ -133,25 +133,27 @@ void FlowGraph::resetFlow() {
 		for (size_t j = 0; j < G[i].e.size(); ++j) {
 			G[i].e[j].flow = 0;
 		}
+		G[i].excess = 0;
 	}
-	fill(excess.begin(), excess.end(), 0);
 }
 
 /* Reset all distance labels. */
 void FlowGraph::resetHeights() {
-	fill(height.begin(), height.end(), 0);
+	for (size_t i = 0; i < G.size(); ++i) {
+		G[i].height = 0;
+	}
 	fill(count.begin(), count.end(), 0);
 }
 
 /* Push along an edge. */
 void FlowGraph::push(Edge &e) {
-	int flow = min(e.cap - e.flow, excess[e.from]);
-	excess[e.from] -= flow;
-	excess[e.to]   += flow;
+	int flow = min(e.cap - e.flow, G[e.from].excess);
+	G[e.from].excess -= flow;
+	G[e.to].excess   += flow;
 	e.flow += flow;
 	G[e.to].e[e.index].flow -= flow;
 
-	rule.add(e.to, height[e.to], excess[e.to]);
+	rule.add(e.to, G[e.to].height, G[e.to].excess);
 }
 
 /* Push given flow along an edge. */
@@ -162,34 +164,34 @@ void FlowGraph::push(Edge &e, int f) {
 
 /* Relabel a vertex. */
 void FlowGraph::relabel(int u) {
-	count[height[u]]--;
-	height[u] = 2*N;
+	count[G[u].height]--;
+	G[u].height = 2*N;
 
 	for (size_t i = 0; i < G[u].e.size(); ++i) {
 		if (G[u].e[i].cap > G[u].e[i].flow) {
-			height[u] = min(height[u], height[G[u].e[i].to] + 1);
+			G[u].height = min(G[u].height, G[G[u].e[i].to].height + 1);
 		}
 	}
 
-	if (height[u] >= N) {
-		height[u] = N;
+	if (G[u].height >= N) {
+		G[u].height = N;
 	}
 	else {
-		count[height[u]]++;
-		rule.add(u, height[u], excess[u]);
+		count[G[u].height]++;
+		rule.add(u, G[u].height, G[u].excess);
 	}
 }
 
 /* Relabel all vertices over the gap h to label N. */
 void FlowGraph::gap(int h) {
 	for (size_t i = 0; i < G.size(); ++i) {
-		if (height[i] < h) continue;
-		if (height[i] >= N) continue;
+		if (G[i].height < h) continue;
+		if (G[i].height >= N) continue;
 
 		rule.deactivate(i);
 
-		count[height[i]]--;
-		height[i] = N;
+		count[G[i].height]--;
+		G[i].height = N;
 	}
 
 	rule.gap(h);
@@ -198,17 +200,17 @@ void FlowGraph::gap(int h) {
 /* Discharge a vertex. */
 void FlowGraph::discharge(int u) {
 	size_t i;
-	for (i = 0; i < G[u].e.size() && excess[u] > 0; ++i) {
+	for (i = 0; i < G[u].e.size() && G[u].excess > 0; ++i) {
 		if (G[u].e[i].cap > G[u].e[i].flow
-				&& height[u] == height[G[u].e[i].to] + 1) {
+				&& G[u].height == G[G[u].e[i].to].height + 1) {
 			push(G[u].e[i]);
 		}
 	}
 
-	if (excess[u] > 0) {
+	if (G[u].excess > 0) {
 		/* Check if a gap will appear. */
-		if (count[height[u]] == 1)
-			gap(height[u]);
+		if (count[G[u].height] == 1)
+			gap(G[u].height);
 		else
 			relabel(u);
 	}
@@ -216,16 +218,16 @@ void FlowGraph::discharge(int u) {
 
 /* Run the push-relabel algorithm to find the min-cut. */
 void FlowGraph::minCutPushRelabel(int source, int sink) {
-	height[source] = N;
+	G[source].height = N;
 
 	rule.activate(source);
 	rule.activate(sink);
 
 	for (size_t i = 0; i < G[source].e.size(); ++i) {
-		excess[source] = G[source].e[i].cap;
+		G[source].excess = G[source].e[i].cap;
 		push(G[source].e[i]);
 	}
-	excess[source] = 0;
+	G[source].excess = 0;
 
 	int c = 0;
 	/* Loop over active nodes using selection rule. */
@@ -237,7 +239,7 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 
 	/* Output the cut based on vertex heights. */
 	for (size_t i = 0; i < cut.size(); ++i) {
-		cut[i] = height[i] >= N;
+		cut[i] = G[i].height >= N;
 	}
 }
 
@@ -292,6 +294,7 @@ Edge *FlowGraph::grow() {
 					cout << G[p].c << endl;
 					exit(1);
 				}
+				(void)len;
 
 				G[q].active = 1;
 				bkq.push(q);
@@ -529,8 +532,8 @@ void FlowGraph::minCutBK(int source, int sink) {
 }
 
 bool FlowGraph::checkExcess(void) {
-	for (size_t i = 0; i < excess.size(); ++i) {
-		if (excess[i] < 0) {
+	for (size_t i = 0; i < G.size(); ++i) {
+		if (G[i].excess < 0) {
 			return false;
 		}
 	}
@@ -598,7 +601,7 @@ bool FlowGraph::checkLabels(void) {
 	for (size_t i = 0; i < G.size(); ++i) {
 		for (size_t j = 0; j < G[i].e.size(); ++j) {
 			if (G[i].e[j].flow < G[i].e[j].cap) {
-				if (height[i] > height[G[i].e[j].to] + 1) {
+				if (G[i].height > G[G[i].e[j].to].height + 1) {
 					return false;
 				}
 			}
@@ -611,8 +614,8 @@ bool FlowGraph::checkLabels(void) {
 bool FlowGraph::checkCount(void) {
 	for (size_t i = 0; i < count.size(); ++i) {
 		int c = 0;
-		for (size_t j = 0; j < height.size(); ++j) {
-			if ((unsigned)height[j] == i) c++;
+		for (size_t j = 0; j < G.size(); ++j) {
+			if ((unsigned)G[j].height == i) c++;
 		}
 		if (c != count[i]) {
 			cout << "c = " << c << ", count[" << i << "] = ";
