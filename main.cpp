@@ -8,6 +8,7 @@
 #include "selectionrule.hpp"
 #include "neighborhood.hpp"
 #include "image.hpp"
+#include "anisotropy.hpp"
 
 using namespace std;
 using namespace cv;
@@ -16,13 +17,17 @@ int main(int argc, char *argv[])
 {
 	int p = 2;
 	double beta = 10;
-	char rarg = 'f';
-	int neighbors = 4;
-	int index;
+
+	int neighbors = 8;
+
+	double sigma = 10.0;
+	double rho   = 10.0;
+	double gamma = 10000.0;
+
 	int c;
 
 	/* Read command line parameters beta and p. */
-	while ((c = getopt(argc, argv, "b:p:n:fh")) != -1) {
+	while ((c = getopt(argc, argv, "b:p:r:s:g:n:fh")) != -1) {
 		switch (c)
 		{
 		case 'p':
@@ -31,42 +36,36 @@ int main(int argc, char *argv[])
 		case 'b':
 			beta = atof(optarg);
 			break;
-		case 'f':
-			rarg = 'f';
+		case 'g':
+			gamma = atof(optarg);
 			break;
-		case 'h':
-			rarg = 'h';
+		case 'r':
+			rho = atof(optarg);
+			break;
+		case 's':
+			sigma = atof(optarg);
 			break;
 		case 'n':
 			neighbors = atoi(optarg);
 			break;
 		case '?':
-			if (optopt == 'p')
+			if (optopt == 'p' || optopt == 'b' || optopt == 'g'
+					|| optopt == 'n' || optopt == 'r'
+					|| optopt == 's') {
 				fprintf(stderr, "Option -%c requires an argument.\n",
 						optopt);
-			if (optopt == 'b')
-				fprintf(stderr, "Option -%c requires an argument.\n",
-						optopt);
-			if (optopt == 'n')
-				fprintf(stderr, "Option -%c requires an argument.\n",
-						optopt);
-			else if (isprint(optopt))
+			}
+			else if (isprint(optopt)) {
 				fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-			else
+			}
+			else {
 				fprintf(stderr, "Unknown option character `\\x%x'.\n",
 						optopt);
+			}
 			return 1;
 		default:
 			exit(1);
 		}
-	}
-
-	cout << "Using p = " << p << endl;
-	cout << "Using beta = " << beta << endl;
-
-	if (neighbors != 4 && neighbors != 8) {
-		cout << "Only 4 or 8 neighbors supported, using 4." << endl;
-		neighbors = 4;
 	}
 
 	/*
@@ -81,15 +80,19 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	int rows = image.rows;
-	int cols = image.cols;
-	int pixels = rows * cols;
+	cout << "Using gamma = " << gamma << endl;
+	cout << "Using rho = " << rho << endl;
+	cout << "Using sigma = " << sigma << endl;
 
-#ifdef DINIC
-	cout << "Using Dinic's maximum flow algorithm." << endl;
-#else
-	cout << "Using the Push-Relabel maximum flow algorithm." << endl;
-#endif
+	Mat_<Tensor> tensors = Mat_<Tensor>::zeros(image.rows, image.cols);
+	Mat blur, edge, structure, color;
+	createAnisotropyTensor(tensors, image, sigma, rho, gamma,
+			blur, edge, structure, color);
+	imwrite(argv[optind + 1], blur);
+	imwrite(argv[optind + 2], edge);
+	imwrite(argv[optind + 3], structure);
+	imwrite(argv[optind + 4], color);
+	//createUniformAnisotropyTensor(tensors, image, gamma);
 
 	/*
 	 * Network only handles integer edges, so for floating
@@ -97,45 +100,64 @@ int main(int argc, char *argv[])
 	 */
 	int a;
 	int b;
-	a = 1;
+	a = 100;
 	b = beta;
-	if (beta < 10) {
-		b = 100 * beta;
-		a = 100;
-	}
+	//if (beta < 10) {
+	//	b = 100 * beta;
+	//	a = 100;
+	//}
 
 	/*
 	 * Specify one quarter of the neighbors of a pixel. The rest
 	 * are added symmetrically on the other sides.
 	 */
-	//Neighborhood neigh;
-	//if (neighbors >= 2) {
-	//	neigh.add( 1, 0, b * 1.0);
-	//	neigh.add( 0, 1, b * 1.0);
-	//}
-	//if (neighbors >= 4) {
-	//	neigh.add( 1, 1, b * 1.0/sqrt(2.0));
-	//	neigh.add(-1, 1, b * 1.0/sqrt(2.0));
-	//}
+	cout << "Creating size " << neighbors << " neighborhood." << endl;
+	Neighborhood neigh;
+	if (neighbors >= 4) {
+		neigh.add( 1, 0, b * 1.0);
+		neigh.add( 0, 1, b * 1.0);
+		neigh.add(-1, 0, b * 1.0);
+		neigh.add( 0,-1, b * 1.0);
+	}
 
-	//Mat out = image.clone();
+	if (neighbors >= 8) {
+		neigh.add( 1, 1, b * 1.0/sqrt(2.0));
+		neigh.add(-1, 1, b * 1.0/sqrt(2.0));
+		neigh.add( 1,-1, b * 1.0/sqrt(2.0));
+		neigh.add(-1,-1, b * 1.0/sqrt(2.0));
+	}
 
-	//HighestLevelRule hrule(pixels + 2);
-	//FIFORule frule(pixels + 2);
+	if (neighbors >= 16) {
+		neigh.add8(1, 2, 1.0);
+	}
 
-	//SelectionRule* rule;
-	//if (rarg == 'h') {
-	//	cout << "Using highest level selection rule." << endl;
-	//	rule = &hrule;
-	//} else {
-	//	cout << "Using FIFO selection rule." << endl;
-	//	rule = &frule;
-	//}
+	if (neighbors >= 32) {
+		neigh.add8(3, 1, 1.0);
+		neigh.add8(3, 2, 1.0);
+	}
 
-	//Image im(&image, &out, *rule, neigh);
-	//im.restore(a, p);
+	if (neighbors >= 48) {
+		neigh.add8(1, 4, 1.0);
+		neigh.add8(3, 4, 1.0);
+	}
 
-	imwrite(argv[optind + 1], out);
+	if (neighbors >= 72) {
+		neigh.add8(1, 5, 1.0);
+		neigh.add8(2, 5, 1.0);
+		neigh.add8(3, 5, 1.0);
+	}
+
+	neigh.setupAngles();
+	for (Neighborhood::iterator it = neigh.begin(); it != neigh.end(); ++it) {
+		cout << it->x << ", " << it->y << ": " << it->dt * 180 / M_PI << endl;
+	}
+
+	Mat out = image.clone();
+
+	restoreAnisotropicTV(image, out, tensors, neigh, a, b, p);
+
+	cout << "Writing output to " << argv[optind + 3] << endl;
+	imwrite(argv[optind + 5], out);
 
 	return 0;
 }
