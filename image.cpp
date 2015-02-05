@@ -101,11 +101,6 @@ void createEdgesAnisotropic(
 				int x = j + it->x;
 				int y = i + it->y;
 
-				if (it->x < 0)
-					continue;
-				if (it->x == 0 && it->y > 0)
-					continue;
-				
 				if (x >= 0 && x < cols && y >= 0 && y < rows) {
 
 					Mat ee = (Mat_<double>(2, 1) << it->x, it->y);
@@ -155,16 +150,13 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 	for (int j = 0; j < in.rows; ++j) {
 		for (int i = 0; i < in.cols; ++i) {
 			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
-			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
 
-			//if (0 < e1) {
-			//	s_caps[j*in.cols + i] += e1 - 0;
-			//}
-			//else {
-			//	t_caps[j*in.cols + i] += 0 - e1;
-			//}
-			s_caps[j*in.cols + i] += max(e1init, 0);
-			t_caps[j*in.cols + i] += max(e1init, 0) - e1;
+			if (0 < e1) {
+				t_caps[j*in.cols + i] += e1 - 0;
+			}
+			else {
+				s_caps[j*in.cols + i] += 0 - e1;
+			}
 		}
 	}
 
@@ -252,19 +244,25 @@ void restoreAnisotropicTV(
 
 	createEdgesAnisotropic(network, neigh, beta, tensors);
 
+#ifdef BOYKOV_KOLMOGOROV
 	setupSink(network, in, alpha, 255, p);
+#endif
+	
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
 
-		//setupSourceSink(network, in, alpha, label, p);
+#ifdef PUSH_RELABEL
+		setupSourceSink(network, in, alpha, label, p);
+		network.minCutPushRelabel(source, sink);
+#else
 		setupSource(network, in, alpha, label, p);
-		//network.minCutPushRelabel(source, sink);
 		network.minCutBK(source, sink);
+#endif
 
 		/* Use the cut to update the output image. */
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {
-				if (network.cut[j*cols + i])
+				if (!network.cut[j*cols + i])
 					out.at<uchar>(j, i) = label;
 			}
 		}

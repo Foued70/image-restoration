@@ -33,6 +33,37 @@ void FlowGraph::addDoubleEdge(int from, int to, int cap) {
 	G[to].e.push_back(Edge(to, from, cap, G[from].e.size() - 1));
 }
 
+#ifdef PUSH_RELABEL
+
+/*
+ * Change the capacity of an edge. Need the from-vertex and
+ * the index of the edge in its edge list (returned from addEdge.
+ */
+void FlowGraph::changeCapacity(int from, int to, int cap) {
+	int index;
+	if (from == source) {
+		index = s_index[to];
+	} else if (to == sink) {
+		index = t_index[from];
+	} else {
+		exit(1);
+	}
+
+	int diff = G[from].e[index].flow - cap;
+
+	G[from].e[index].cap = cap;
+
+	if (diff > 0) {
+		excess[from] += diff;
+		excess[to] -= diff;
+		G[from].e[index].flow = cap;
+		G[to].e[G[from].e[index].index].flow = -cap;
+		rule.add(from, height[from], excess[from]);
+	}
+}
+
+#else
+
 /*
  * Change the capacity of an edge. Need the from-vertex and
  * the index of the edge in its edge list (returned from addEdge)
@@ -47,9 +78,9 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		exit(1);
 	}
 
-	/* Nodes in the T set can not recieve any more flow anyways. */
-	//if (from == source && G[to].c == SOURCE)
-	//	return;
+	/* Nodes in the S set can not send any more flow anyways. */
+	if (from == source && G[to].c == SOURCE)
+		return;
 
 	G[from].e[index].cap = cap;
 
@@ -75,7 +106,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 			G[to].p = NULL;
 			orphans.push(to);
 		}
-		
+
 		if (m == rt && G[to].p == vt) {
 			G[to].p = NULL;
 			orphans.push(to);
@@ -93,6 +124,8 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		}
 	}
 }
+
+#endif
 
 /* Reset all flow and excess. */
 void FlowGraph::resetFlow() {
@@ -487,7 +520,7 @@ void FlowGraph::minCutBK(int source, int sink) {
 	for (size_t i = 0; i < cut.size(); ++i) {
 		if (G[i].c == SOURCE) size1++;
 		else if (G[i].c == SINK) size2++;
-		cut[i] = G[i].c == SINK;
+		cut[i] = G[i].c == SOURCE;
 	}
 	assert(checkCapacity());
 	assert(checkActive());
