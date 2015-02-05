@@ -83,6 +83,10 @@ void createAnisotropyTensor(
 			if (s2 > s1)
 				fprintf(stderr, "OOPS: Wrong ordering of eigenvalues\n");
 
+			//double l1 = 1.0 * (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
+			//double l2 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
+			//double l1 = 3.0 / exp(0.1 * s2);
+			//double l2 = 3.0 / exp(0.1 * s2) / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
 			double l1 = 1.0;
 			double l2 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
 			//double C  = 1000;
@@ -94,7 +98,8 @@ void createAnisotropyTensor(
 			eval2.at<double>(1) = l2;
 			tensors(i, j) = Tensor(Mat(evec.t() * Mat::diag(eval2) * evec));
 
-			h.at<double>(i, j) = fmod(atan2(evec.at<double>(1), evec.at<double>(0)) * 180.0 / M_PI + 180.0, 180.0);
+			h.at<double>(i, j) = fmod(atan2(evec.at<double>(1), evec.at<double>(0))
+					* 180.0 / M_PI + 180.0, 180.0);
 			s.at<double>(i, j) = 0;
 			v.at<double>(i, j) = 1.0/(1.0 + l2);
 
@@ -112,6 +117,7 @@ void createAnisotropyTensor(
 	structure.create(in.size(), CV_64F);
 	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
 	cvtColor(structure, structure, CV_GRAY2BGR);
+	resize(structure, structure, Size(0, 0), 2, 2);
 	for (int i = 0; i < in.rows; i += 15) {
 		for (int j = 0; j < in.cols; j += 15) {
 			Tensor b = tensors(i, j);
@@ -123,10 +129,10 @@ void createAnisotropyTensor(
 
 			Point2f p1(evec.row(0));
 			Point2f p2(evec.row(1));
-			line(structure, Point(j, i), Point2f(j, i) + 10 * s2 * p1,
-					CV_RGB(255,0,0));
-			line(structure, Point(j, i), Point2f(j, i) + 10 * s1 * p2,
-					CV_RGB(0,0,0));
+			line(structure, 2*Point(j, i), 2*Point2f(j, i) + 20 * s2 * p1,
+					CV_RGB(255,0,0), 1.2, CV_AA);
+			line(structure, 2*Point(j, i), 2*Point2f(j, i) + 20 * s1 * p2,
+					CV_RGB(0,0,0), 1.2, CV_AA);
 			//ellipse(structure, Point(j, i), Size(10*s1, 10*s2),
 			//		atan2(p2.y, p2.x) * 180 / M_PI,
 			//		0, 360,

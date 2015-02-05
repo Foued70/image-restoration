@@ -19,7 +19,7 @@ int f(int u, int v, int p) {
 
 /* Fidelity energy term. */
 int Ei(int label, int pix, int u, int p) {
-	return (f(label+1, pix, p) - f(label, pix, p)) * (1 - u);
+	return (f(label+1, pix, p) - f(label, pix, p)) * u;
 }
 
 //void createEdges(FlowGraph& network, Neighborhood& neigh) {
@@ -100,6 +100,11 @@ void createEdgesAnisotropic(
 
 				int x = j + it->x;
 				int y = i + it->y;
+
+				if (it->x < 0)
+					continue;
+				if (it->x == 0 && it->y > 0)
+					continue;
 				
 				if (x >= 0 && x < cols && y >= 0 && y < rows) {
 
@@ -144,20 +149,22 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 	std::vector<int> s_caps(in.rows * in.cols);
 	std::vector<int> t_caps(in.rows * in.cols);
 
-	fill(s_caps.begin(), s_caps.end(), 0);
-	fill(t_caps.begin(), t_caps.end(), 0);
+	//fill(s_caps.begin(), s_caps.end(), 0);
+	//fill(t_caps.begin(), t_caps.end(), 0);
 
 	for (int j = 0; j < in.rows; ++j) {
 		for (int i = 0; i < in.cols; ++i) {
-			int e0 = Ei(label, in.at<uchar>(j, i), 0, p);
 			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
+			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
 
-			if (e0 < e1) {
-				s_caps[j*in.cols + i] += e1 - e0;
-			}
-			else {
-				t_caps[j*in.cols + i] += e0 - e1;
-			}
+			//if (0 < e1) {
+			//	s_caps[j*in.cols + i] += e1 - 0;
+			//}
+			//else {
+			//	t_caps[j*in.cols + i] += 0 - e1;
+			//}
+			s_caps[j*in.cols + i] += max(e1init, 0);
+			t_caps[j*in.cols + i] += max(e1init, 0) - e1;
 		}
 	}
 
@@ -167,6 +174,41 @@ void setupSourceSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
 
 	for (size_t i = 0; i < t_caps.size(); ++i) {
 		network.changeCapacity(i, network.getSink(), alpha * t_caps[i]);
+	}
+}
+
+void setupSource(FlowGraph& network, Mat& in, int alpha, int label, int p) {
+	std::vector<int> s_caps(in.rows * in.cols);
+
+	for (int j = 0; j < in.rows; ++j) {
+		for (int i = 0; i < in.cols; ++i) {
+			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
+			int e1 = Ei(label, in.at<uchar>(j, i), 1, p);
+
+			s_caps[j*in.cols + i] += max(e1init, 0) - e1;
+		}
+	}
+
+	for (size_t i = 0; i < s_caps.size(); ++i) {
+		if (s_caps[i] != 0)
+			network.changeCapacity(network.getSource(), i, alpha * s_caps[i]);
+	}
+}
+
+void setupSink(FlowGraph& network, Mat& in, int alpha, int label, int p) {
+	std::vector<int> t_caps(in.rows * in.cols);
+
+	for (int j = 0; j < in.rows; ++j) {
+		for (int i = 0; i < in.cols; ++i) {
+			int e1init = Ei(255, in.at<uchar>(j, i), 1, p);
+
+			t_caps[j*in.cols + i] += max(e1init, 0);
+		}
+	}
+
+	for (size_t i = 0; i < t_caps.size(); ++i) {
+		if (t_caps[i] != 0)
+			network.changeCapacity(i, network.getSink(), alpha * t_caps[i]);
 	}
 }
 
@@ -210,16 +252,19 @@ void restoreAnisotropicTV(
 
 	createEdgesAnisotropic(network, neigh, beta, tensors);
 
+	setupSink(network, in, alpha, 255, p);
 	for (int label = 255; label >= 0; --label) {
 		cout << "Label: " << label << endl;
 
-		setupSourceSink(network, in, alpha, label, p);
-		network.minCutPushRelabel(source, sink);
+		//setupSourceSink(network, in, alpha, label, p);
+		setupSource(network, in, alpha, label, p);
+		//network.minCutPushRelabel(source, sink);
+		network.minCutBK(source, sink);
 
 		/* Use the cut to update the output image. */
 		for (int j = 0; j < rows; ++j) {
 			for (int i = 0; i < cols; ++i) {
-				if (!network.cut[j*cols + i])
+				if (network.cut[j*cols + i])
 					out.at<uchar>(j, i) = label;
 			}
 		}
