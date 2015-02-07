@@ -51,3 +51,8 @@ and the output
 * `structure.pgm`: vector tensor visualization
 * `color.png`: colorized tensor visualization
 * `out.pgm`: restored image
+
+
+### GUI
+
+A very simple GUI can be found in the `fiddle/` folder. It makes it a bit easier to play with the tensor parameters. It requires a QT of version 4 or higher and is compiled by running `qmake .` followed by `make`.
