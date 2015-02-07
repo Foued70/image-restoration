@@ -31,3 +31,5 @@ HEADERS  += fiddlewindow.h \
 FORMS    += fiddlewindow.ui
 
 LIBS     += `pkg-config opencv --libs`
+
+DEFINES  += BOYKOV_KOLMOGOROV
