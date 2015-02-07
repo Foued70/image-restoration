@@ -55,6 +55,7 @@ private:
 	std::queue<int> orphans;
 
 	int lastGrowVertex;
+	size_t lastIndex;
 public:
 	std::vector<char> cut;
 

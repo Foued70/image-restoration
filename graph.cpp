@@ -53,6 +53,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 
 	G[from].e[index].cap = cap;
 
+	/* Check if we need to reduce the flow. */
 	if (diff > 0) {
 		G[from].excess += diff;
 		G[to].excess -= diff;
@@ -87,6 +88,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 	if (from != source)
 		return;
 
+	/* Push flow along two-edged path. */
 	int si = G[to].si;
 	int ti = G[to].ti;
 
@@ -113,6 +115,7 @@ void FlowGraph::changeCapacity(int from, int to, int cap) {
 		}
 	}
 
+	/* Activate vertices if the new edge was not saturated. */
 	if (G[from].e[si].flow != G[from].e[si].cap) {
 		if (!G[from].active) {
 			bkq.push(from);
@@ -243,6 +246,7 @@ void FlowGraph::minCutPushRelabel(int source, int sink) {
 	}
 }
 
+/* The capacity of the edge, in the direction given by the tree. */
 int FlowGraph::treeCap(const Edge& e, Color col) const {
 	if (col == SOURCE)
 		return e.cap - e.flow;
@@ -252,24 +256,28 @@ int FlowGraph::treeCap(const Edge& e, Color col) const {
 		return 0;
 }
 
+/* Try to grow the trees S and T from the active vertices. */
 Edge *FlowGraph::grow() {
-	static size_t i = 0;
-
 	while (!bkq.empty()) {
 		int p = bkq.front();
 		if (!G[p].active) {
 			bkq.pop();
 			continue;
 		}
-		//cout << "Growing from (" << G[p].e.size() << "): " << p << endl;
-		//cout << "last = " << i << endl;
 
-		if (lastGrowVertex != p)
-			i = 0;
+		size_t i = 0;
+
+		/*
+		 * If we're growing from the same vertex as before,
+		 * continue with the same index, if not restart at 0.
+		 */
+		if (lastGrowVertex == p)
+			i = lastIndex;
 
 		lastGrowVertex = p;
 
 		for (; i < G[p].e.size(); ++i) {
+			lastIndex = i;
 			Edge *e = &G[p].e[i];
 			int q = e->to;
 
@@ -280,10 +288,10 @@ Edge *FlowGraph::grow() {
 				continue;
 
 			if (G[q].c == FREE) {
+				/* Found a free vertex, add it. */
 				G[q].c = G[p].c;
 
 				int len;
-				//cout << "Parent of " << q << " is now " << p << endl;
 				if (G[p].c == SOURCE) {
 					G[q].p = e;
 					assert(treeOrigin(p, len) == source);
@@ -300,7 +308,7 @@ Edge *FlowGraph::grow() {
 				bkq.push(q);
 			}
 			else if (G[q].c != G[p].c) {
-				//cout << "The trees meet! " << p << " -> " << q << endl;
+				/* The trees meet! */
 				if (G[p].c == SOURCE) {
 					return e;
 				}
@@ -323,9 +331,11 @@ Edge *FlowGraph::grow() {
 	return NULL;
 }
 
+/* Augment along path given by the edge e, and implicitly by the trees. */
 int FlowGraph::augment(Edge* e) {
 	int m = e->cap - e->flow;
 
+	/* Find maximum flow we can send. */
 	Edge *cur = e;
 	while (cur != NULL) {
 		m = min(m, cur->cap - cur->flow);
@@ -337,23 +347,16 @@ int FlowGraph::augment(Edge* e) {
 		m = min(m, cur->cap - cur->flow);
 		cur = G[cur->to].p;
 	}
-	//cout << path[path.size()-1]->to;
-	//cout << " : " << m << endl;
-	//cout << "Saturation: " << m << endl;
-
-	//assert(path[0]->from == source);
-	//assert(path[path.size()-1]->to == sink);
 
 	cur = e;
 	bool back = true;
 	int len = 0;
+	/* Loop through path and update flow. */
 	while (cur != NULL) {
-		/* Check for saturation */
+		/* If saturated, we must orphanize. */
 		if (cur->cap - cur->flow == m) {
 			int u = cur->from;
 			int v = cur->to;
-
-			//cout << "Saturation at " << u << " -> " << v << endl;
 
 			if (G[u].c == SOURCE && G[v].c == SOURCE) {
 				if (v != source && v != sink) {
@@ -385,10 +388,10 @@ int FlowGraph::augment(Edge* e) {
 			cur = G[cur->to].p;
 		}
 	}
-	//cout << "Len: " << len << endl;
 	return len;
 }
 
+/* Find the origin of vertex u. */
 int FlowGraph::treeOrigin(int u, int &len) const {
 	int cur = u;
 	len = 0;
@@ -410,17 +413,17 @@ int FlowGraph::treeOrigin(int u, int &len) const {
 	return cur;
 }
 
+/* Adopt orphans. */
 void FlowGraph::adopt() {
-	//cout << "Adopting: " << orphans.size() << endl;
 	while (orphans.size() > 0) {
 		int u = orphans.front();
-		//cout << "Orphan: " << u << endl;
 		orphans.pop();
 
 		assert(G[u].c != FREE);
 
 		int minlen = 1000000000;
 		int minidx = -1;
+		/* Aim to find parent close to the root of the tree. */
 		for (size_t i = 0; i < G[u].e.size(); ++i) {
 			int v = G[u].e[i].to;
 
@@ -461,6 +464,7 @@ void FlowGraph::adopt() {
 			}
 		}
 
+		/* If not found, free vertex, and orphanize possible children. */
 		if (!found) {
 			for (size_t i = 0; i < G[u].e.size(); ++i) {
 				int v = G[u].e[i].to;
@@ -496,24 +500,19 @@ void FlowGraph::minCutBK(int source, int sink) {
 	lastGrowVertex = -1;
 	adopt();
 
-	//cout << "Num active: " << numActive() << endl;
 	int numpaths  = 0;
 	double totlen = 0;
 	while (true) {
 		Edge *e;
-		//cout << "Growing path" << endl;
 		e = grow();
-		//checkTree();
 
 		if (e == NULL) {
-			//cout << "Path was empty..." << endl;
+			/* Empty path. */
 			break;
 		}
 
-		//cout << "Augmenting along path" << endl;
 		totlen += augment(e);
 		numpaths++;
-		//cout << "Adopting orphans" << endl;
 		adopt();
 	}
 
@@ -527,7 +526,6 @@ void FlowGraph::minCutBK(int source, int sink) {
 	}
 	assert(checkCapacity());
 	assert(checkActive());
-	//cout << "Num active: " << numActive() << endl;
 	cout << "Inbetweeners: " << cut.size() - size1 - size2 << endl;
 }
 

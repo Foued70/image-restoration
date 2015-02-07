@@ -1,8 +1,0 @@
-- bruk pixelverdien for å bestemme hvilken pixel vi tar neste gang!
-- sjekk at vi aldri bruker noen queues vi allerede har gappet i highest label
-- refaktorer koden som lager grafen
-  o først lager vi kantene mellom pikslene
-  o så en funksjon som tar inn label og lager kanter til source og sink
-  o denne burde kanskje virke likt første gang som senere?
-  o de må begge avhenge av nabolaget til pikselen!
-  o hvordan skal det være definert? som et sett med relative koordinater?

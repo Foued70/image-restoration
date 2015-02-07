@@ -92,24 +92,17 @@ int main(int argc, char *argv[])
 	imwrite(argv[optind + 2], edge);
 	imwrite(argv[optind + 3], structure);
 	imwrite(argv[optind + 4], color);
-	//createUniformAnisotropyTensor(tensors, image, gamma);
 
 	/*
-	 * Network only handles integer edges, so for floating
-	 * point beta parameters, we cheat a little bit.
+	 * Network only handles integer edges, so we increase the scale a bit.
 	 */
 	int a;
 	int b;
 	a = 100;
 	b = beta;
-	//if (beta < 10) {
-	//	b = 100 * beta;
-	//	a = 100;
-	//}
 
 	/*
-	 * Specify one quarter of the neighbors of a pixel. The rest
-	 * are added symmetrically on the other sides.
+	 * Specify the neighbors of a pixel.
 	 */
 	cout << "Creating size " << neighbors << " neighborhood." << endl;
 	Neighborhood neigh;
@@ -147,13 +140,13 @@ int main(int argc, char *argv[])
 		neigh.add8(3, 5, 1.0);
 	}
 
+	cout << "Neighborhood: " << endl;
 	neigh.setupAngles();
 	for (Neighborhood::iterator it = neigh.begin(); it != neigh.end(); ++it) {
 		cout << it->x << ", " << it->y << ": " << it->dt * 180 / M_PI << endl;
 	}
 
 	Mat out = image.clone();
-
 	restoreAnisotropicTV(image, out, tensors, neigh, a, b, p);
 
 	cout << "Writing output to " << argv[optind + 3] << endl;

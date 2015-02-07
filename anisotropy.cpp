@@ -20,6 +20,7 @@ void createAnisotropyTensor(
 
 	Mat grad;
 
+	/* Apply blur by sigma. */
 	GaussianBlur(in, blur, Size(0,0), sigma, 0, BORDER_REFLECT);
 
 	Mat grad_x, grad_y;
@@ -33,6 +34,7 @@ void createAnisotropyTensor(
 	kernel.at<short>(0, 1) = 0;
 	kernel.at<short>(0, 2) = 1;
 
+	/* Calculate gradient in x and y. */
 	filter2D(blur, grad_x, CV_64F, kernel, anchor, 0, BORDER_REFLECT);
 	transpose(kernel, kernel);
 	filter2D(blur, grad_y, CV_64F, kernel, anchor, 0, BORDER_REFLECT);
@@ -40,10 +42,12 @@ void createAnisotropyTensor(
 	Mat x_sq, y_sq, xy;
 	Mat x_sqr, y_sqr, xyr;
 
+	/* Element of outer product. */
 	x_sq = grad_x.mul(grad_x);
 	y_sq = grad_y.mul(grad_y);
 	xy   = grad_x.mul(grad_y);
 
+	/* Integration scale (rho) smoothing. */
 	GaussianBlur(x_sq, x_sqr, Size(0,0), rho, 0, BORDER_REFLECT);
 	GaussianBlur(y_sq, y_sqr, Size(0,0), rho, 0, BORDER_REFLECT);
 	GaussianBlur(xy  , xyr  , Size(0,0), rho, 0, BORDER_REFLECT);
@@ -60,6 +64,7 @@ void createAnisotropyTensor(
 
 	for (int i = 0; i < in.rows; ++i) {
 		for (int j = 0; j < in.cols; ++j) {
+			/* Structure tensor. */
 			Tensor b = Tensor(
 					x_sqr.at<double>(i,j),
 					xyr.at<double>(i,j),
@@ -67,6 +72,7 @@ void createAnisotropyTensor(
 					y_sqr.at<double>(i,j)
 					);
 
+			/* Structure tensor without rho smoothing, for the edge detector. */
 			Tensor c = Tensor(
 					x_sq.at<double>(i,j),
 					xy.at<double>(i,j),
@@ -83,15 +89,8 @@ void createAnisotropyTensor(
 			if (s2 > s1)
 				fprintf(stderr, "OOPS: Wrong ordering of eigenvalues\n");
 
-			//double l1 = 1.0 * (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
-			//double l2 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
-			//double l1 = 3.0 / exp(0.1 * s2);
-			//double l2 = 3.0 / exp(0.1 * s2) / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
 			double l1 = 1.0;
 			double l2 = 1.0 / (1.0 + (s1 - s2) * (s1 - s2) / (gamma*gamma));
-			//double C  = 1000;
-			//double l1 = gamma + (1.0 - gamma) * exp(-C / ((s1-s2)*(s1-s2)));
-			//double l2 = gamma;
 
 			Mat eval2 = eval.clone();
 			eval2.at<double>(0) = l1;
@@ -114,6 +113,7 @@ void createAnisotropyTensor(
 	}
 	normalize(edge, edge, 0, 255, NORM_MINMAX, CV_8U);
 
+	/* Create tensor visualization, double the size. */
 	structure.create(in.size(), CV_64F);
 	GaussianBlur(in, structure, Size(0,0), sigma, 0, BORDER_REFLECT);
 	cvtColor(structure, structure, CV_GRAY2BGR);
@@ -133,10 +133,6 @@ void createAnisotropyTensor(
 					CV_RGB(255,0,0), 1.2, CV_AA);
 			line(structure, 2*Point(j, i), 2*Point2f(j, i) + 20 * s1 * p2,
 					CV_RGB(0,0,0), 1.2, CV_AA);
-			//ellipse(structure, Point(j, i), Size(10*s1, 10*s2),
-			//		atan2(p2.y, p2.x) * 180 / M_PI,
-			//		0, 360,
-			//		CV_RGB(0, 200, 200));
 		}
 	}
 
@@ -153,6 +149,7 @@ void createAnisotropyTensor(
 	cvtColor(hsv, color, CV_HSV2BGR);
 }
 
+/* Create a uniform tensor, for testing. */
 void createUniformAnisotropyTensor(Mat_<Tensor>& tensors, Mat& in, double gamma) {
 	Mat evec, eval;
 	for (int i = 0; i < in.rows; ++i) {
