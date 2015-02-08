@@ -8,7 +8,6 @@
 #include "neighborhood.hpp"
 #include "anisotropy.hpp"
 
-//void createEdges();
 void createEdgesAnisotropic(
 		FlowGraph& network,
 		Neighborhood& neigh,
@@ -18,8 +17,6 @@ void createEdgesAnisotropic(
 void setupSourceSink(FlowGraph& network, cv::Mat& in, int alpha, int label, int p);
 void setupSource(FlowGraph& network, cv::Mat& in, int alpha, int label, int p);
 void setupSink(FlowGraph& network, cv::Mat& in, int alpha, int label, int p);
-
-//void restore(int alpha, int p);
 
 void restoreAnisotropicTV(
 		cv::Mat& in,
