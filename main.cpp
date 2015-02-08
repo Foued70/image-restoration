@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 	Mat out = image.clone();
 	restoreAnisotropicTV(image, out, tensors, neigh, a, b, p);
 
-	cout << "Writing output to " << argv[optind + 3] << endl;
+	cout << "Writing output to " << argv[optind + 5] << endl;
 	imwrite(argv[optind + 5], out);
 
 	return 0;
